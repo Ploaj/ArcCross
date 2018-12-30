@@ -22,7 +22,7 @@ namespace CrossArc.Structs
         public uint FileInformationCount;
         public uint FileNameStartIndex;
         public short FileNameCount;
-        public short Unk4;
+        public ushort Unk4;
         public uint Unk5;
     }
 }

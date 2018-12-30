@@ -75,12 +75,7 @@ namespace CrossArc
             fileTree.ImageList.Images.Add("folder", Properties.Resources.folder);
             fileTree.ImageList.Images.Add("file", Properties.Resources.file);
 
-            fileTree.Nodes.Add(Root);
-            fileTree.Nodes.Add(BGM);
-
             //initialize arc
-
-            fileTree.BeginUpdate();
 
             // BGM
             /*foreach(_sBGMOffset off in ARC.BGMOffsets)
@@ -94,30 +89,42 @@ namespace CrossArc
             }*/
 
             // Files
-            /*if(ARC.FileInformation != null)
-            foreach(ARC.FileOffsetGroup g in ARC.GetFiles())
-            {
-                TreeNode Folder = GetFolderFromPath(g.Path);
-
-                Folder.Nodes.Add(new FileNode(g.FileName)
+            if (ARC.FileInformation != null)
+                foreach (ARC.FileOffsetGroup g in ARC.GetFiles())
                 {
-                    ArcOffset = g.ArcOffset,
-                    CompSize = (uint)g.CompSize,
-                    DecompSize = (uint)g.DecompSize,
-                    Flags = g.Flags
-                });
-            }
-            */
+                    TreeNode Folder = GetFolderFromPath(g.Path);
 
-            string[] folders = ARC.GetPaths();
+                    FileNode fNode = new FileNode(g.FileName)
+                    {
+                        ArcOffset = g.ArcOffset[0],
+                        CompSize = (uint)g.CompSize[0],
+                        DecompSize = (uint)g.DecompSize[0],
+                        Flags = g.Flags[0]
+                    };
+
+                    if ((g.ArcOffset.Length > 1))
+                    {
+
+                        fNode.IsRegional = true;
+                        fNode._rArcOffset = g.ArcOffset;
+                        fNode._rCompSize = g.CompSize;
+                        fNode._rDecompSize = g.DecompSize;
+                        fNode._rFlags = g.Flags;
+                    }
+                    
+                    Folder.Nodes.Add(fNode);
+                }
+
+
+            /*string[] folders = ARC.GetPaths();
             foreach(string s in folders)
             {
                 //fileTree.Nodes.Add(new TreeNode(s));
                 MKDir(s);
-            }
+            }*/
 
             //update
-            foreach (_sDirectoryList h in ARC.DirectoryLists)
+            /*foreach (_sDirectoryList h in ARC.DirectoryLists)
             {
                 _sFileInformation[] fi = ARC.GetFileInformationFromFolder(h);
                 string path = ARC.GetPathString(ARC.FolderHashDict, h);
@@ -136,7 +143,11 @@ namespace CrossArc
                         Flags = group.Flags
                     });
                 }
-            }
+            }*/
+            
+            fileTree.BeginUpdate();
+            fileTree.Nodes.Add(Root);
+            fileTree.Nodes.Add(BGM);
             fileTree.EndUpdate();
         }
         
@@ -195,10 +206,34 @@ namespace CrossArc
             flagLabel.Text = "";
             if (fileTree.SelectedNode != null && fileTree.SelectedNode is FileNode n)
             {
+                regionCB.Visible = false;
                 offLabel.Text = "0x" + n.ArcOffset.ToString("X");
                 compLabel.Text = "0x" + n.CompSize.ToString("X");
                 decompLabel.Text = "0x" + n.DecompSize.ToString("X");
                 flagLabel.Text = "0x" + n.Flags.ToString("X");
+
+                if (n.IsRegional)
+                {
+                    if (regionCB.SelectedIndex == -1)
+                        regionCB.SelectedIndex = 0;
+                    regionCB.Visible = true;
+                    offLabel.Text = "0x" + n._rArcOffset[regionCB.SelectedIndex].ToString("X");
+                    compLabel.Text = "0x" + n._rCompSize[regionCB.SelectedIndex].ToString("X");
+                    decompLabel.Text = "0x" + n._rDecompSize[regionCB.SelectedIndex].ToString("X");
+                    flagLabel.Text = "0x" + n._rFlags[regionCB.SelectedIndex].ToString("X");
+                }
+            }
+        }
+
+        public static int SelectedRegion = -1;
+
+        private void regionCB_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (fileTree.SelectedNode != null && fileTree.SelectedNode is FileNode n)
+            {
+                if(SelectedRegion != regionCB.SelectedIndex)
+                    fileTree_AfterSelect(null, null);
+                SelectedRegion = regionCB.SelectedIndex;
             }
         }
     }

@@ -31,14 +31,15 @@
             fileTree = new System.Windows.Forms.TreeView();
             this.label1 = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.label2 = new System.Windows.Forms.Label();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
+            this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.offLabel = new System.Windows.Forms.Label();
             this.compLabel = new System.Windows.Forms.Label();
             this.decompLabel = new System.Windows.Forms.Label();
             this.flagLabel = new System.Windows.Forms.Label();
+            this.regionCB = new System.Windows.Forms.ComboBox();
             this.groupBox1.SuspendLayout();
             this.tableLayoutPanel1.SuspendLayout();
             this.SuspendLayout();
@@ -75,15 +76,6 @@
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "File Properties";
             // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(3, 32);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(54, 13);
-            this.label2.TabIndex = 2;
-            this.label2.Text = "CompSize";
-            // 
             // tableLayoutPanel1
             // 
             this.tableLayoutPanel1.ColumnCount = 2;
@@ -108,6 +100,15 @@
             this.tableLayoutPanel1.Size = new System.Drawing.Size(187, 130);
             this.tableLayoutPanel1.TabIndex = 3;
             // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(3, 32);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(54, 13);
+            this.label2.TabIndex = 2;
+            this.label2.Text = "CompSize";
+            // 
             // label3
             // 
             this.label3.AutoSize = true;
@@ -129,7 +130,7 @@
             // offLabel
             // 
             this.offLabel.AutoSize = true;
-            this.offLabel.Location = new System.Drawing.Point(76, 0);
+            this.offLabel.Location = new System.Drawing.Point(80, 0);
             this.offLabel.Name = "offLabel";
             this.offLabel.Size = new System.Drawing.Size(0, 13);
             this.offLabel.TabIndex = 5;
@@ -137,7 +138,7 @@
             // compLabel
             // 
             this.compLabel.AutoSize = true;
-            this.compLabel.Location = new System.Drawing.Point(76, 32);
+            this.compLabel.Location = new System.Drawing.Point(80, 32);
             this.compLabel.Name = "compLabel";
             this.compLabel.Size = new System.Drawing.Size(0, 13);
             this.compLabel.TabIndex = 6;
@@ -145,7 +146,7 @@
             // decompLabel
             // 
             this.decompLabel.AutoSize = true;
-            this.decompLabel.Location = new System.Drawing.Point(76, 64);
+            this.decompLabel.Location = new System.Drawing.Point(80, 64);
             this.decompLabel.Name = "decompLabel";
             this.decompLabel.Size = new System.Drawing.Size(0, 13);
             this.decompLabel.TabIndex = 7;
@@ -153,16 +154,44 @@
             // flagLabel
             // 
             this.flagLabel.AutoSize = true;
-            this.flagLabel.Location = new System.Drawing.Point(76, 96);
+            this.flagLabel.Location = new System.Drawing.Point(80, 96);
             this.flagLabel.Name = "flagLabel";
             this.flagLabel.Size = new System.Drawing.Size(0, 13);
             this.flagLabel.TabIndex = 8;
+            // 
+            // regionCB
+            // 
+            this.regionCB.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.regionCB.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.regionCB.FormattingEnabled = true;
+            this.regionCB.Items.AddRange(new object[] {
+            "Japanese",
+            "American English",
+            "Canadian French",
+            "Latin American Spanish",
+            "British English",
+            "European French",
+            "Castilian Spanish",
+            "German",
+            "Italian",
+            "Dutch",
+            "Russian",
+            "Korean",
+            "Simplified Chinese",
+            "Traditional Chinese"});
+            this.regionCB.Visible = false;
+            this.regionCB.Location = new System.Drawing.Point(440, 155);
+            this.regionCB.Name = "regionCB";
+            this.regionCB.Size = new System.Drawing.Size(187, 21);
+            this.regionCB.TabIndex = 3;
+            this.regionCB.SelectedIndexChanged += new System.EventHandler(this.regionCB_SelectedIndexChanged);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(642, 288);
+            this.Controls.Add(this.regionCB);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(fileTree);
             this.Name = "Form1";
@@ -175,7 +204,6 @@
         }
 
         #endregion
-        private static System.Windows.Forms.TreeView fileTree;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.Label label2;
@@ -186,5 +214,7 @@
         private System.Windows.Forms.Label compLabel;
         private System.Windows.Forms.Label decompLabel;
         private System.Windows.Forms.Label flagLabel;
+        private System.Windows.Forms.ComboBox regionCB;
+        public static System.Windows.Forms.TreeView fileTree;
     }
 }

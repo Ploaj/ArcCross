@@ -15,6 +15,13 @@ namespace CrossArc.GUI
         public uint DecompSize { get; set; }
         public uint Flags { get; set; }
 
+        public bool IsRegional { get; set; } = false;
+
+        public long[] _rArcOffset;
+        public long[] _rCompSize;
+        public long[] _rDecompSize;
+        public uint[] _rFlags;
+
         public FileNode(string text)
         {
             this.Text = text;
@@ -33,9 +40,10 @@ namespace CrossArc.GUI
                 Path = me.Text + "/" + Path;
                 me = me.Parent;
             }
+            Path = Path.Replace(":", "");
             Directory.CreateDirectory(Path);
 
-            SaveFile(Path + "/" + Text);
+            SaveFile(Path + "/" + Text.Replace(":", ""));
         }
 
         public void ExtractFolder()
@@ -53,6 +61,11 @@ namespace CrossArc.GUI
 
         public void SaveFile(string FileName)
         {
+            if (IsRegional)
+            {
+                File.WriteAllBytes(FileName, ARC.GetFileData(_rArcOffset[Form1.SelectedRegion], _rCompSize[Form1.SelectedRegion], _rDecompSize[Form1.SelectedRegion]));
+            }
+            else
             File.WriteAllBytes(FileName, ARC.GetFileData(ArcOffset, CompSize, DecompSize));
         }
     }
