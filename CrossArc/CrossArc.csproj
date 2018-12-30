@@ -90,6 +90,8 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Structs\_sExtraFITable.cs" />
+    <Compile Include="Structs\_sRegionalHeader.cs" />
     <Compile Include="Structs\_sRootTable.cs" />
     <Compile Include="Structs\_sArcHeader.cs" />
     <Compile Include="Structs\_sBGMOffset.cs" />

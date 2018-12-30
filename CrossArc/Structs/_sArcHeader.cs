@@ -13,7 +13,7 @@ namespace CrossArc.Structs
         public long Hash;
         public long MusicFileSectionOffset;
         public long FileSectionOffset;
-        public long MusicSectionOffset;
+        public long FileSection2Offset;
         public long NodeSectionOffset;
         public long UnkSectionOffset;
     }
