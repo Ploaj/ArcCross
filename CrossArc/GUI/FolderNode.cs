@@ -22,7 +22,7 @@ namespace CrossArc.GUI
             ContextMenu = Form1.NodeContextMenu;
         }
 
-        public void Extract()
+        public void Extract(bool compressed = false)
         {
             Queue<TreeNode> NodeList = new Queue<TreeNode>();
 
@@ -35,7 +35,7 @@ namespace CrossArc.GUI
                 TreeNode n = NodeList.Dequeue();
                 if (n is FileNode)
                 {
-                    ((FileNode)n).Extract();
+                    ((FileNode)n).Extract(compressed);
                 }
                 else
                 {
@@ -44,7 +44,7 @@ namespace CrossArc.GUI
                 }
             }
         }
-        public void ExtractFolder()
+        public void ExtractFolder(bool compressed = false)
         {
             using (SaveFileDialog d = new SaveFileDialog())
             {
@@ -56,7 +56,7 @@ namespace CrossArc.GUI
                     {
                         if(f is FileNode)
                         {
-                            ((FileNode)f).SaveFile(Path.GetDirectoryName(d.FileName) + "/" + f.Text);
+                            ((FileNode)f).SaveFile(Path.GetDirectoryName(d.FileName) + "/" + f.Text, compressed);
                         }
                     }
                 }

@@ -31,7 +31,7 @@ namespace CrossArc.GUI
             SelectedImageKey = "file";
         }
 
-        public void Extract()
+        public void Extract(bool compressed = false)
         {
             TreeNode me = this.Parent;
             string Path = "";
@@ -43,10 +43,10 @@ namespace CrossArc.GUI
             Path = Path.Replace(":", "");
             Directory.CreateDirectory(Path);
 
-            SaveFile(Path + "/" + Text.Replace(":", ""));
+            SaveFile(Path + "/" + Text.Replace(":", ""), compressed);
         }
 
-        public void ExtractFolder()
+        public void ExtractFolder(bool compressed = false)
         {
             using (SaveFileDialog d = new SaveFileDialog())
             {
@@ -59,14 +59,32 @@ namespace CrossArc.GUI
             }
         }
 
-        public void SaveFile(string FileName)
+        public void SaveFile(string FileName, bool compressed = false)
         {
             if (IsRegional)
             {
-                File.WriteAllBytes(FileName, ARC.GetFileData(_rArcOffset[Form1.SelectedRegion], _rCompSize[Form1.SelectedRegion], _rDecompSize[Form1.SelectedRegion]));
+                if (compressed)
+                {
+                    // Make DecompSize = CompSize so it doesn't get decompressed
+                    File.WriteAllBytes(FileName, ARC.GetFileData(_rArcOffset[Form1.SelectedRegion], _rCompSize[Form1.SelectedRegion], _rCompSize[Form1.SelectedRegion]));
+                }
+                else
+                {
+                    File.WriteAllBytes(FileName, ARC.GetFileData(_rArcOffset[Form1.SelectedRegion], _rCompSize[Form1.SelectedRegion], _rDecompSize[Form1.SelectedRegion]));
+                }
             }
             else
-            File.WriteAllBytes(FileName, ARC.GetFileData(ArcOffset, CompSize, DecompSize));
+            {
+                if (compressed)
+                {
+                    // Make DecompSize = CompSize so it doesn't get decompressed
+                    File.WriteAllBytes(FileName, ARC.GetFileData(ArcOffset, CompSize, CompSize));
+                }
+                else
+                {
+                    File.WriteAllBytes(FileName, ARC.GetFileData(ArcOffset, CompSize, DecompSize));
+                }
+            }
         }
     }
 }

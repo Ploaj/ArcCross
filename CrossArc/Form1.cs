@@ -25,6 +25,14 @@ namespace CrossArc
                     MenuItem ExF = new MenuItem("Extract To Folder");
                     ExF.Click += ExtractFolder;
                     _nodeContextMenu.MenuItems.Add(ExF);
+
+                    MenuItem Exc = new MenuItem("Extract Compressed");
+                    Exc.Click += ExtractCompressed;
+                    _nodeContextMenu.MenuItems.Add(Exc);
+
+                    MenuItem ExcF = new MenuItem("Extract Compressed To Folder");
+                    ExcF.Click += ExtractCompressedFolder;
+                    _nodeContextMenu.MenuItems.Add(ExcF);
                 }
                 return _nodeContextMenu;
             }
@@ -49,6 +57,40 @@ namespace CrossArc
         }
 
         public static void ExtractFolder(object sender, EventArgs args)
+        {
+            TreeNode node = Form1.fileTree.SelectedNode;
+            if (node == null)
+            {
+                return;
+            }
+            if (node is FolderNode)
+            {
+                ((FolderNode)node).ExtractFolder();
+            }
+            if (node is FileNode)
+            {
+                ((FileNode)node).ExtractFolder();
+            }
+        }
+
+        public static void ExtractCompressed(object sender, EventArgs args)
+        {
+            TreeNode node = Form1.fileTree.SelectedNode;
+            if (node == null)
+            {
+                return;
+            }
+            if (node is FolderNode)
+            {
+                ((FolderNode)node).Extract(true);
+            }
+            if (node is FileNode)
+            {
+                ((FileNode)node).Extract(true);
+            }
+        }
+
+        public static void ExtractCompressedFolder(object sender, EventArgs args)
         {
             TreeNode node = Form1.fileTree.SelectedNode;
             if (node == null)
