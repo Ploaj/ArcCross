@@ -90,7 +90,7 @@ namespace CrossArc
 
             // Files
             if (ARC.FileInformation != null)
-                foreach (ARC.FileOffsetGroup g in ARC.GetFiles())
+                foreach (FileOffsetGroup g in ARC.GetFiles())
                 {
                     TreeNode Folder = GetFolderFromPath(g.Path);
 

@@ -73,12 +73,16 @@ namespace CrossArc
 
             //ARC.HashCheck();
 
+            //HashDict.Init();
+            //ARC.CompareHashes("ARCV1Hashes.bin", "ARCV1_1Hashes.bin");
+
             if (!Extract)
             {
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
                 HashDict.Init();
                 ARC.Open();
+                //ARC.CreateHashCompare("ARCV1_1Hashes.bin");
                 Application.Run(new Form1());
             }
             else

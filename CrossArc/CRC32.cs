@@ -8,6 +8,14 @@ namespace CrossArc
 {
     public class CRC32
     {
+        public static uint Crc32C(byte[] input)
+        {
+            var hash = 0xffffffffu;
+            for (var i = 0; i < input.Length; i++)
+                hash = (hash >> 8) ^ CrcTable[input[i] ^ hash & 0xff];
+            return hash;
+        }
+
         public static uint Crc32C(string input)
         {
             uint crc = 0xFFFFFFFF;

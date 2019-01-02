@@ -7,9 +7,24 @@ using Zstandard.Net;
 using System.Runtime.InteropServices;
 using System.IO.Compression;
 using System.Windows.Forms;
+using System.Linq;
 
 namespace CrossArc
 {
+    public struct FileOffsetGroup
+    {
+        public long[] ArcOffset;
+        public long[] Offset;
+        public long[] CompSize;
+        public long[] DecompSize;
+        public uint[] Flags;
+        public string Path;
+        public string FileName;
+        public uint FileNameHash;
+        public uint PathHash;
+    }
+
+
     public class ARC
     {
         public static string FilePath = "data.arc";
@@ -341,7 +356,9 @@ namespace CrossArc
                         OffsetGroup.Flags[OffsetGroup.Flags.Length - 1] = OffsetGroup2.Flags[0];
                     }
                 }
-                
+
+                OffsetGroup.FileNameHash = item.Hash2;
+                OffsetGroup.PathHash= item.Parent;
                 OffsetGroup.FileName = GetName(item.Hash2);
                 OffsetGroup.Path = GetName(item.Parent);
                 Files.Add(OffsetGroup);
@@ -583,18 +600,6 @@ namespace CrossArc
             }
         }
 
-
-        public struct FileOffsetGroup
-        {
-            public long[] ArcOffset;
-            public long[] Offset;
-            public long[] CompSize;
-            public long[] DecompSize;
-            public uint[] Flags;
-            public string Path;
-            public string FileName;
-        }
-
         public static FileOffsetGroup GetOffsetFromSubFile(_sFileInformation FileInfo)
         {
             FileOffsetGroup g = new FileOffsetGroup();
@@ -705,6 +710,141 @@ namespace CrossArc
             handle.Free();
 
             return theStructure;
+        }
+
+        public struct HashCompareCheck
+        {
+            public uint Name;
+            public uint Path;
+            public uint Hash;
+        }
+
+        public static void CompareHashes(string PreviousHashFileName, string CurrentHashFileName)
+        {
+            Dictionary<long, HashCompareCheck> PreviousHashes = new Dictionary<long, HashCompareCheck>();
+            List<HashCompareCheck> Hash2 = new List<HashCompareCheck>();
+
+            using (BinaryReader reader = new BinaryReader(new FileStream(PreviousHashFileName, FileMode.Open)))
+            {
+                reader.ReadUInt32();
+                uint FileCount = reader.ReadUInt32();
+                var Hashes = ReadArray<HashCompareCheck>(reader, FileCount);
+                foreach(var f in Hashes)
+                {
+                    long key = ((long)f.Name << 32) | f.Path;
+                    if(!PreviousHashes.ContainsKey(key))
+                        PreviousHashes.Add(key, f);
+                    else
+                    {
+                        string Path = "";
+                        if (!HashDict.TryGetValue(f.Path, out Path))
+                            Path = "0x" + f.Path.ToString("X");
+                        string Name = "";
+                        if (!HashDict.TryGetValue(f.Name, out Name))
+                            Name = "0x" + f.Name.ToString("X");
+                        Console.WriteLine($"Duplicate: {Path}{Name}");
+                        //PreviousHashes[key] = f;
+                    }
+                }
+            }
+
+            using (BinaryReader reader = new BinaryReader(new FileStream(CurrentHashFileName, FileMode.Open)))
+            {
+                reader.ReadUInt32();
+                uint FileCount = reader.ReadUInt32();
+                var Hashes = ReadArray<HashCompareCheck>(reader, FileCount);
+                Dictionary<long, object> Keys = new Dictionary<long, object>();
+                foreach (var f in Hashes)
+                {
+                    long key = ((long)f.Name << 32) | f.Path;
+                    if (!Keys.ContainsKey(key))
+                    {
+                        Hash2.Add(f);
+                        Keys.Add(key, f);
+                    }
+                }
+            }
+
+            List<string> Changed = new List<string>();
+            List<string> New = new List<string>();
+
+
+            int count = 0;
+            int Percent = 1;
+
+            foreach (HashCompareCheck c in Hash2)
+            {
+                count++;
+                if (count == Hash2.Count / 100)
+                {
+                    Console.WriteLine($"{Percent}% done");
+                    Percent++;
+                    count = 0;
+                }
+                string Path = "";
+                if (!HashDict.TryGetValue(c.Path, out Path))
+                    Path = "0x" + c.Path.ToString("X");
+                string Name = "";
+                if (!HashDict.TryGetValue(c.Name, out Name))
+                    Name = "0x" + c.Name.ToString("X");
+                long key = ((long)c.Name << 32) | c.Path;
+                if (PreviousHashes.ContainsKey(key))
+                {
+                    if(PreviousHashes[key].Hash != c.Hash)
+                        Changed.Add(Path + Name);
+                    PreviousHashes.Remove(key);
+                }
+                else
+                {
+                    New.Add(Path + Name);
+                }
+            }
+
+            using (StreamWriter writer = new StreamWriter(new FileStream("ChangeLog.txt", FileMode.Create)))
+            {
+                writer.WriteLine("New Files:-----------------------------------------------------------------");
+                foreach (var f in New)
+                {
+                    writer.WriteLine(f);
+                }
+                writer.WriteLine("Changed Files:-----------------------------------------------------------------");
+                foreach(var f in Changed)
+                {
+                    writer.WriteLine(f);
+                }
+            }
+        }
+
+        public static void CreateHashCompare(string outFileName)
+        {
+            using (BinaryReader reader = new BinaryReader(new FileStream(FilePath, FileMode.Open)))
+            {
+                using (BinaryWriter writer = new BinaryWriter(new FileStream(outFileName, FileMode.Create)))
+                {
+                    var Files = GetFiles();
+                    writer.Write("CRCH".ToCharArray());
+                    writer.Write(Files.Count);
+                    int PercentSlice = Files.Count / 100;
+                    int FileCount = 0;
+                    int Percent = 0;
+                    foreach (var file in Files)
+                    {
+                        if(FileCount >= PercentSlice)
+                        {
+                            FileCount = 0;
+                            Console.WriteLine($"{Percent}% Done");
+                            Percent++;
+                        }
+                        FileCount++;
+                        writer.Write(file.FileNameHash);
+                        writer.Write(file.PathHash);
+                        reader.BaseStream.Position = file.ArcOffset[0];
+                        byte[] data = reader.ReadBytes((int)file.CompSize[0]);
+                        writer.Write(CRC32.Crc32C(data));
+                    }
+                }
+            }
+            
         }
     }
 }
