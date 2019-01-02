@@ -359,7 +359,10 @@ namespace CrossArc
 
                 OffsetGroup.FileNameHash = item.Hash2;
                 OffsetGroup.PathHash= item.Parent;
-                OffsetGroup.FileName = GetName(item.Hash2);
+                string Extension = "";
+                HashDict.TryGetValue(item.Extension, out Extension);
+                if (Extension != "") Extension = "." + Extension;
+                OffsetGroup.FileName = GetName(item.Hash2, Extension);
                 OffsetGroup.Path = GetName(item.Parent);
                 Files.Add(OffsetGroup);
             }
@@ -673,7 +676,7 @@ namespace CrossArc
 
         public static Dictionary<uint, string> MissingHashes = new Dictionary<uint, string>();
         public static Dictionary<uint, string> UsedHashes = new Dictionary<uint, string>();
-        public static string GetName(uint Hash)
+        public static string GetName(uint Hash, string Extension = "")
         {
             string name = "";
             if (HashDict.TryGetValue(Hash, out name))
@@ -685,7 +688,7 @@ namespace CrossArc
 
             //if (!MissingHashes.ContainsKey(Hash))
             //    MissingHashes.Add(Hash, name);
-            return "0x" + Hash.ToString("X");
+            return "0x" + Hash.ToString("X") + Extension;
         }
 
 

@@ -97,11 +97,6 @@ namespace CrossArc
 
 
         
-        
-
-        
-
-        
 
         public static void PrintStruct<T>(T Struct) where T : struct
         {
