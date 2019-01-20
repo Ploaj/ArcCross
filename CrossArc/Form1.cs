@@ -4,6 +4,7 @@ using CrossArc.GUI;
 using CrossArc.Structs;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 
 namespace CrossArc
 {
@@ -11,6 +12,8 @@ namespace CrossArc
     {
         FolderNode Root = new FolderNode("root");
         FolderNode BGM = new FolderNode("music");
+
+        public static int SelectedRegion = 0;
 
         public static ContextMenu NodeContextMenu
         {
@@ -48,15 +51,24 @@ namespace CrossArc
             {
                 return;
             }
-            if(node is FolderNode)
+            if(node is FolderNode foldernode)
             {
-                ((FolderNode)node).Extract();
+                var info = foldernode.GetExtractInformation();
+
+                ExtractProgressBar pb = new ExtractProgressBar();
+                pb.Show();
+                pb.Extract(info);
             }
-            if (node is FileNode)
+            if (node is FileNode filenode)
             {
-                ((FileNode)node).Extract();
+                var info = filenode.GetExtractInformation(filenode.FullFilePath);
+
+                ExtractProgressBar pb = new ExtractProgressBar();
+                pb.Show();
+                pb.Extract(info);
             }
         }
+
 
         public static void ExtractFolder(object sender, EventArgs args)
         {
@@ -82,13 +94,21 @@ namespace CrossArc
             {
                 return;
             }
-            if (node is FolderNode)
+            if (node is FolderNode foldernode)
             {
-                ((FolderNode)node).Extract(true);
+                var info = foldernode.GetExtractInformation(true);
+
+                ExtractProgressBar pb = new ExtractProgressBar();
+                pb.Show();
+                pb.Extract(info);
             }
-            if (node is FileNode)
+            if (node is FileNode filenode)
             {
-                ((FileNode)node).Extract(true);
+                var info = filenode.GetExtractInformation(filenode.FullFilePath, true);
+
+                ExtractProgressBar pb = new ExtractProgressBar();
+                pb.Show();
+                pb.Extract(info);
             }
         }
 
@@ -120,6 +140,8 @@ namespace CrossArc
             fileTree.ImageList = new ImageList();
             fileTree.ImageList.Images.Add("folder", Properties.Resources.folder);
             fileTree.ImageList.Images.Add("file", Properties.Resources.file);
+
+            regionCB.SelectedIndex = 0;
 
             //initialize arc
 
@@ -293,7 +315,7 @@ namespace CrossArc
             flagLabel.Text = "";
             if (fileTree.SelectedNode != null && fileTree.SelectedNode is FileNode n)
             {
-                regionCB.Visible = false;
+                //regionCB.Visible = false;
                 offLabel.Text = "0x" + n.ArcOffset.ToString("X");
                 compLabel.Text = "0x" + n.CompSize.ToString("X");
                 decompLabel.Text = "0x" + n.DecompSize.ToString("X");
@@ -303,7 +325,7 @@ namespace CrossArc
                 {
                     if (regionCB.SelectedIndex == -1)
                         regionCB.SelectedIndex = 0;
-                    regionCB.Visible = true;
+                    //regionCB.Visible = true;
                     offLabel.Text = "0x" + n._rArcOffset[regionCB.SelectedIndex].ToString("X");
                     compLabel.Text = "0x" + n._rCompSize[regionCB.SelectedIndex].ToString("X");
                     decompLabel.Text = "0x" + n._rDecompSize[regionCB.SelectedIndex].ToString("X");
@@ -312,14 +334,12 @@ namespace CrossArc
             }
         }
 
-        public static int SelectedRegion = 0;
-
         private void regionCB_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (fileTree.SelectedNode != null && fileTree.SelectedNode is FileNode n)
+            //if (fileTree.SelectedNode != null && fileTree.SelectedNode is FileNode n)
             {
-                if(SelectedRegion != regionCB.SelectedIndex)
-                    fileTree_AfterSelect(null, null);
+              //  if(SelectedRegion != regionCB.SelectedIndex)
+                //    fileTree_AfterSelect(null, null);
                 SelectedRegion = regionCB.SelectedIndex;
             }
         }

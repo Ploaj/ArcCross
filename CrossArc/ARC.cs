@@ -194,11 +194,11 @@ namespace CrossArc
                 // Another Hash Table
                 Debug.WriteLine("RegionalHashList " + R.BaseStream.Position.ToString("X"));
                 R.BaseStream.Seek(0xC * 0xE, SeekOrigin.Current);
-               /* for(int i = 0; i < 0xE; i++)
+                /*for(int i = 0; i < 0xE; i++)
                 {
                     //string Name = "";
                     //HashDict.TryGetValue(, out Name);
-                    Console.WriteLine(CRC32.Crc32C("English").ToString("X") + " " + R.ReadUInt32().ToString("X") + " " + R.ReadUInt64().ToString("X"));
+                    Console.WriteLine(CRC32.Crc32C("+us_en").ToString("X") + " " + R.ReadUInt32().ToString("X") + " " + R.ReadUInt64().ToString("X"));
                 }*/
 
                 //folders

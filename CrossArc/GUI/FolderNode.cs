@@ -39,6 +39,30 @@ namespace CrossArc.GUI
             Nodes.Add(new TreeNode("Dummy"));
         }
 
+        public ArcExtractInformation[] GetExtractInformation(bool compressed = false)
+        {
+            Queue<TreeNode> NodeList = new Queue<TreeNode>();
+            List<ArcExtractInformation> info = new List<ArcExtractInformation>();
+            foreach (TreeNode n in Nodes)
+            {
+                NodeList.Enqueue(n);
+            }
+            while (NodeList.Count > 0)
+            {
+                TreeNode n = NodeList.Dequeue();
+                if (n is FileNode fileNode)
+                {
+                    info.AddRange(fileNode.GetExtractInformation(fileNode.FullFilePath, compressed));
+                }
+                else
+                {
+                    foreach (TreeNode child in n.Nodes)
+                        NodeList.Enqueue(child);
+                }
+            }
+            return info.ToArray();
+        }
+
         public void Extract(bool compressed = false)
         {
             Queue<TreeNode> NodeList = new Queue<TreeNode>();

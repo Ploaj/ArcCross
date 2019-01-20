@@ -78,9 +78,16 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="GUI\ArcExtractInformation.cs" />
     <Compile Include="GUI\FileNode.cs" />
     <Compile Include="GUI\FolderNode.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="GUI\ProgressBar.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\ProgressBar.Designer.cs">
+      <DependentUpon>ProgressBar.cs</DependentUpon>
     </Compile>
     <Compile Include="HashDict.cs" />
     <Compile Include="Program.cs" />
@@ -129,6 +136,9 @@
   <ItemGroup>
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="GUI\ProgressBar.resx">
+      <DependentUpon>ProgressBar.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

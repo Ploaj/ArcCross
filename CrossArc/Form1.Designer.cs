@@ -40,6 +40,7 @@
             this.decompLabel = new System.Windows.Forms.Label();
             this.flagLabel = new System.Windows.Forms.Label();
             this.regionCB = new System.Windows.Forms.ComboBox();
+            this.label5 = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.tableLayoutPanel1.SuspendLayout();
             this.SuspendLayout();
@@ -178,19 +179,30 @@
             "Russian",
             "Korean",
             "Simplified Chinese",
-            "Traditional Chinese"});
-            this.regionCB.Visible = false;
-            this.regionCB.Location = new System.Drawing.Point(440, 155);
+            "Traditional Chinese",
+            "All"});
+            this.regionCB.Location = new System.Drawing.Point(440, 174);
             this.regionCB.Name = "regionCB";
             this.regionCB.Size = new System.Drawing.Size(187, 21);
             this.regionCB.TabIndex = 3;
             this.regionCB.SelectedIndexChanged += new System.EventHandler(this.regionCB_SelectedIndexChanged);
+            // 
+            // label5
+            // 
+            this.label5.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(440, 155);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(91, 13);
+            this.label5.TabIndex = 4;
+            this.label5.Text = "Region to extract:";
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(642, 288);
+            this.Controls.Add(this.label5);
             this.Controls.Add(this.regionCB);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(fileTree);
@@ -200,6 +212,7 @@
             this.tableLayoutPanel1.ResumeLayout(false);
             this.tableLayoutPanel1.PerformLayout();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -215,6 +228,7 @@
         private System.Windows.Forms.Label decompLabel;
         private System.Windows.Forms.Label flagLabel;
         private System.Windows.Forms.ComboBox regionCB;
+        private System.Windows.Forms.Label label5;
         public static System.Windows.Forms.TreeView fileTree;
     }
 }
