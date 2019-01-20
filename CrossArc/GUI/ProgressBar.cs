@@ -54,16 +54,24 @@ namespace CrossArc.GUI
             {
                 foreach (var file in toExtract)
                 {
-                    r.BaseStream.Position = (file.ArcOffset);
-                    byte[] data = r.ReadBytes((int)file.CompSize);
-                    if (file.CompSize != file.DecompSize)
+                    try
                     {
-                        data = ARC.Decompress(data);
+                        r.BaseStream.Position = (file.ArcOffset);
+                        byte[] data = r.ReadBytes((int)file.CompSize);
+                        if (file.CompSize != file.DecompSize)
+                        {
+                            data = ARC.Decompress(data);
+                        }
+                        Directory.CreateDirectory(Path.GetDirectoryName(file.FilePath) + "\\");
+                        File.WriteAllBytes(file.FilePath, data);
+                        index++;
+                        Update((int)Math.Floor((index / (float)toExtract.Length) * 100), file.FilePath);
                     }
-                    Directory.CreateDirectory(Path.GetDirectoryName(file.FilePath));
-                    File.WriteAllBytes(file.FilePath, data);
-                    index++;
-                    Update((int)Math.Floor((index / (float)toExtract.Length) * 100), file.FilePath);
+                    catch(Exception e)
+                    {
+                        index++;
+                        Update((int)Math.Floor((index / (float)toExtract.Length) * 100), e.ToString());
+                    }
                 }
             }
         }
