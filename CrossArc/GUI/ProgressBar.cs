@@ -62,7 +62,7 @@ namespace CrossArc.GUI
                         {
                             data = ARC.Decompress(data);
                         }
-                        Directory.CreateDirectory(Path.GetDirectoryName(file.FilePath) + "\\");
+                        Directory.CreateDirectory("root\\" + Path.GetDirectoryName(file.FilePath) + "\\");
                         File.WriteAllBytes("root\\" + file.FilePath, data);
                         index++;
                         Update((int)Math.Floor((index / (float)toExtract.Length) * 100), file.FilePath);
