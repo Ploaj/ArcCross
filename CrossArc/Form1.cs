@@ -27,17 +27,17 @@ namespace CrossArc
                     Ex.Click += Extract;
                     _nodeContextMenu.MenuItems.Add(Ex);
 
-                    MenuItem ExF = new MenuItem("Extract To Folder");
+                    /*MenuItem ExF = new MenuItem("Extract To Folder");
                     ExF.Click += ExtractFolder;
-                    _nodeContextMenu.MenuItems.Add(ExF);
+                    _nodeContextMenu.MenuItems.Add(ExF);*/
 
                     MenuItem Exc = new MenuItem("Extract Compressed");
                     Exc.Click += ExtractCompressed;
                     _nodeContextMenu.MenuItems.Add(Exc);
 
-                    MenuItem ExcF = new MenuItem("Extract Compressed To Folder");
+                    /*MenuItem ExcF = new MenuItem("Extract Compressed To Folder");
                     ExcF.Click += ExtractCompressedFolder;
-                    _nodeContextMenu.MenuItems.Add(ExcF);
+                    _nodeContextMenu.MenuItems.Add(ExcF);*/
                 }
                 return _nodeContextMenu;
             }
