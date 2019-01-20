@@ -43,16 +43,16 @@ namespace CrossArc.GUI
         {
             Queue<TreeNode> NodeList = new Queue<TreeNode>();
             List<ArcExtractInformation> info = new List<ArcExtractInformation>();
-            Expand();
-            foreach (TreeNode n in Nodes)
+            //Expand();
+            foreach (TreeNode n in SubNodes)
             {
-                n.Expand();
+                //n.Expand();
                 NodeList.Enqueue(n);
             }
             while (NodeList.Count > 0)
             {
                 TreeNode n = NodeList.Dequeue();
-                n.Expand();
+                //n.Expand();
                 if (n is FileNode fileNode)
                 {
                     info.AddRange(fileNode.GetExtractInformation(fileNode.FullFilePath, compressed));

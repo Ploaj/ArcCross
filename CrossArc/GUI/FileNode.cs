@@ -25,14 +25,7 @@ namespace CrossArc.GUI
         }
         private bool _isRegional = false;
 
-        public string FullFilePath
-        {
-            get
-            {
-                return DirectoryPath + "/" + Text.Replace(":", "");
-            }
-        }
-
+        public string FullFilePath { get; set; }
         public string DirectoryPath
         {
             get

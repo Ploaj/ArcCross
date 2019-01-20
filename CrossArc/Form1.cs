@@ -137,6 +137,8 @@ namespace CrossArc
 
             fileTree.NodeMouseClick += (sender, args) => fileTree.SelectedNode = args.Node;
 
+            fileTree.HideSelection = false;
+
             fileTree.ImageList = new ImageList();
             fileTree.ImageList.Images.Add("folder", Properties.Resources.folder);
             fileTree.ImageList.Images.Add("file", Properties.Resources.file);
@@ -169,7 +171,8 @@ namespace CrossArc
                         ArcOffset = g.ArcOffset[0],
                         CompSize = (uint)g.CompSize[0],
                         DecompSize = (uint)g.DecompSize[0],
-                        Flags = g.Flags[0]//(uint)g.SubFileInformationOffset
+                        Flags = g.Flags[0],//(uint)g.SubFileInformationOffset
+                        FullFilePath = g.Path + g.FileName
                     };
 
                     if ((g.ArcOffset.Length > 1))
@@ -180,6 +183,7 @@ namespace CrossArc
                         fNode._rCompSize = g.CompSize;
                         fNode._rDecompSize = g.DecompSize;
                         fNode._rFlags = g.Flags;
+                        fNode.FullFilePath = g.Path + g.FileName;
                     }
                     
                     Folder.SubNodes.Add(fNode);
@@ -323,6 +327,14 @@ namespace CrossArc
 
                 if (n.IsRegional)
                 {
+                    if (regionCB.SelectedIndex == 14)
+                    {
+                        offLabel.Text = "0x0";
+                        compLabel.Text = "0x0";
+                        decompLabel.Text = "0x0";
+                        flagLabel.Text = "0x0";
+                        return;
+                    }
                     if (regionCB.SelectedIndex == -1)
                         regionCB.SelectedIndex = 0;
                     //regionCB.Visible = true;
@@ -336,11 +348,10 @@ namespace CrossArc
 
         private void regionCB_SelectedIndexChanged(object sender, EventArgs e)
         {
-            //if (fileTree.SelectedNode != null && fileTree.SelectedNode is FileNode n)
+            SelectedRegion = regionCB.SelectedIndex;
+            if (fileTree.SelectedNode != null && fileTree.SelectedNode is FileNode n)
             {
-              //  if(SelectedRegion != regionCB.SelectedIndex)
-                //    fileTree_AfterSelect(null, null);
-                SelectedRegion = regionCB.SelectedIndex;
+                fileTree_AfterSelect(null, null);
             }
         }
     }
