@@ -80,8 +80,17 @@ namespace CrossArc
             {
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
+
+                var timer = new Stopwatch();
+                timer.Start();
                 HashDict.Init();
+                timer.Stop();
+                Debug.WriteLine("Initiating Hash Dict: " + timer.ElapsedMilliseconds);
+                timer.Reset();
+                timer.Start();
                 ARC.Open();
+                timer.Stop();
+                Debug.WriteLine("Initiating Arc: " + timer.ElapsedMilliseconds);
                 //ARC.CreateHashCompare("ARCV1_1Hashes.bin");
                 Application.Run(new Form1());
             }

@@ -2,6 +2,8 @@
 using System.Windows.Forms;
 using CrossArc.GUI;
 using CrossArc.Structs;
+using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace CrossArc
 {
@@ -110,6 +112,8 @@ namespace CrossArc
         public Form1()
         {
             InitializeComponent();
+            
+            fileTree.BeforeExpand += folderTree_BeforeExpand;
 
             fileTree.NodeMouseClick += (sender, args) => fileTree.SelectedNode = args.Node;
 
@@ -131,17 +135,19 @@ namespace CrossArc
             }*/
 
             // Files
+            var timer = new Stopwatch();
+            timer.Start();
             if (ARC.FileInformation != null)
                 foreach (FileOffsetGroup g in ARC.GetFiles())
                 {
-                    TreeNode Folder = GetFolderFromPath(g.Path);
+                    FolderNode Folder = (FolderNode)GetFolderFromPath(g.Path);
 
                     FileNode fNode = new FileNode(g.FileName)
                     {
                         ArcOffset = g.ArcOffset[0],
                         CompSize = (uint)g.CompSize[0],
                         DecompSize = (uint)g.DecompSize[0],
-                        Flags = g.Flags[0]
+                        Flags = g.Flags[0]//(uint)g.SubFileInformationOffset
                     };
 
                     if ((g.ArcOffset.Length > 1))
@@ -154,9 +160,10 @@ namespace CrossArc
                         fNode._rFlags = g.Flags;
                     }
                     
-                    Folder.Nodes.Add(fNode);
+                    Folder.SubNodes.Add(fNode);
                 }
-
+            timer.Stop();
+            Debug.WriteLine("To load files into tree: " + timer.ElapsedMilliseconds);
 
             /*string[] folders = ARC.GetPaths();
             foreach(string s in folders)
@@ -191,46 +198,84 @@ namespace CrossArc
             fileTree.Nodes.Add(Root);
             fileTree.Nodes.Add(BGM);
             fileTree.EndUpdate();
+
+            //DumpWithExtension(".nuanmb");
+        }
+
+        private void folderTree_BeforeExpand(object sender, TreeViewCancelEventArgs e)
+        {
+            ((FolderNode)e.Node).BeforeExpand();
+        }
+
+        public void DumpWithExtension(string Extension)
+        {
+            Queue<FolderNode> FolderNodes = new Queue<FolderNode>();
+            foreach(var node in fileTree.Nodes)
+            {
+                if (node is FolderNode fn)
+                    FolderNodes.Enqueue(fn);
+                if (node is FileNode file)
+                    if (file.Text.EndsWith(Extension))
+                    {
+                        file.Extract(false);
+                    }
+            }
+
+            while(FolderNodes.Count > 0)
+            {
+                var FolderNode = FolderNodes.Dequeue();
+
+                foreach(var node in FolderNode.SubNodes)
+                {
+                    if (node is FolderNode fn)
+                        FolderNodes.Enqueue(fn);
+                    if (node is FileNode file)
+                        if (file.Text.EndsWith(Extension))
+                        {
+                            file.Extract(false);
+                        }
+                }
+            }
         }
         
         public void MKDir(string path)
         {
             string[] levels = path.Split('/');
-            TreeNodeCollection Level = Root.Nodes;
+            var Level = Root.SubNodes;
             for(int i = 0; i < levels.Length; i++)
             {
                 if (levels[i].Equals("")) continue;
-                TreeNode folder = FindFolder(levels[i], Level);
+                FolderNode folder = (FolderNode)FindFolder(levels[i], Level);
                 if(folder == null)
                 {
                     folder = new FolderNode(levels[i]);
                     Level.Add(folder);
                 }
-                Level = folder.Nodes;
+                Level = folder.SubNodes;
             }
         }
 
         public TreeNode GetFolderFromPath(string path)
         {
             string[] levels = path.Split('/');
-            TreeNodeCollection Level = Root.Nodes;
-            TreeNode Node = null;
+            var Level = Root.SubNodes;
+            FolderNode Node = null;
             for (int i = 0; i < levels.Length; i++)
             {
                 if (levels[i].Equals("")) continue;
-                Node = FindFolder(levels[i], Level);
+                Node = (FolderNode)FindFolder(levels[i], Level);
                 if (Node == null)
                 {
                     FolderNode newFolder = new FolderNode(levels[i]);
                     Level.Add(newFolder);
                     Node = newFolder;
                 }
-                Level = Node.Nodes;
+                Level = Node.SubNodes;
             }
             return Node;
         }
 
-        public TreeNode FindFolder(string name, TreeNodeCollection Nodes)
+        public TreeNode FindFolder(string name, List<TreeNode> Nodes)
         {
             foreach(TreeNode tn in Nodes)
             {
@@ -267,7 +312,7 @@ namespace CrossArc
             }
         }
 
-        public static int SelectedRegion = -1;
+        public static int SelectedRegion = 0;
 
         private void regionCB_SelectedIndexChanged(object sender, EventArgs e)
         {

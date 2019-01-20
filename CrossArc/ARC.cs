@@ -22,6 +22,7 @@ namespace CrossArc
         public string FileName;
         public uint FileNameHash;
         public uint PathHash;
+        public long SubFileInformationOffset;
     }
 
 
@@ -46,6 +47,9 @@ namespace CrossArc
         public static Dictionary<uint, _sDirectoryList> FolderHashDict;
         public static Dictionary<int, _sDirectoryOffsets> ChunkHash1 = new Dictionary<int, _sDirectoryOffsets>();
         public static Dictionary<int, _sDirectoryOffsets> ChunkHash2 = new Dictionary<int, _sDirectoryOffsets>();
+
+        private static long SubFileInformationStart;
+        private static long SubFileInformationStart2;
 
         public static void Open()
         {
@@ -215,7 +219,9 @@ namespace CrossArc
                 FileInformation = ReadArray<_sFileInformation>(R, NodeHeader.FileInformationCount);
 
                 Debug.WriteLine("subfileoffset " + R.BaseStream.Position.ToString("X"));
+                SubFileInformationStart = R.BaseStream.Position;
                 SubFileInformation_1 = ReadArray<_SubFileInfo>(R, NodeHeader.SubFileCount);
+                SubFileInformationStart2 = R.BaseStream.Position;
                 SubFileInformation_2 = ReadArray<_SubFileInfo>(R, NodeHeader.SubFileCount2);
 
                 _sHashInt[] HashInts = ReadArray<_sHashInt>(R, NodeHeader.FolderCount);
@@ -266,7 +272,7 @@ namespace CrossArc
 
                 //Debug.WriteLine((Header.FileSectionOffset + DirectoryOffsets_1[510].Offset).ToString("X"));
 
-                Debug.WriteLine(HashInts[HashInts.Length - 1].Index.ToString("X") + " " + HashInts[HashInts.Length - 1].Hash.ToString("X"));
+                /*Debug.WriteLine(HashInts[HashInts.Length - 1].Index.ToString("X") + " " + HashInts[HashInts.Length - 1].Hash.ToString("X"));
                 Debug.WriteLine("FolderHashes 0x" + DirectoryLists.Length.ToString("X"));
                 Debug.WriteLine("Music Table 0x" + BGMOffsets.Length.ToString("X"));
                 Debug.WriteLine("Chunks 1 0x" + DirectoryOffsets_1.Length.ToString("X"));
@@ -274,7 +280,7 @@ namespace CrossArc
                 Debug.WriteLine("HashFolderCounts 0x" + HashFolderCounts.Length.ToString("X"));
                 Debug.WriteLine("FileInformation 0x" + FileInformation.Length.ToString("X"));
                 Debug.WriteLine("SubFile1 0x" + SubFileInformation_1.Length.ToString("X"));
-                Debug.WriteLine("SubFile2 0x" + SubFileInformation_2.Length.ToString("X"));
+                Debug.WriteLine("SubFile2 0x" + SubFileInformation_2.Length.ToString("X"));*/
 
                 FolderHashDict = new Dictionary<uint, _sDirectoryList>();
                 foreach (_sDirectoryList fh in DirectoryLists)
@@ -334,7 +340,8 @@ namespace CrossArc
 
         public static List<FileOffsetGroup> GetFiles()
         {
-            List<FileOffsetGroup> Files = new List<FileOffsetGroup>();
+            List<FileOffsetGroup> Files = new List<FileOffsetGroup>(FileInformation.Length);
+            int index = 0;
             foreach (var item in FileInformation)
             {
                 var Directory = DirectoryLists[item.DirectoryIndex >> 8];
@@ -365,6 +372,7 @@ namespace CrossArc
                 OffsetGroup.FileName = GetName(item.Hash2, Extension);
                 OffsetGroup.Path = GetName(item.Parent);
                 Files.Add(OffsetGroup);
+                index++;
             }
             return Files;
         }
@@ -430,6 +438,7 @@ namespace CrossArc
                 g.CompSize = new long[] { FileOffset.CompSize };
                 g.DecompSize = new long[] { FileOffset.DecompSize };
                 g.Flags = new uint[] { FileOffset.Flags };
+                g.SubFileInformationOffset = SubFileInformationStart2 + ExternalOffset * 16;
             }
             else
             {
@@ -438,6 +447,7 @@ namespace CrossArc
                 g.CompSize = new long[] { FileOffset.CompSize };
                 g.DecompSize = new long[] { FileOffset.DecompSize };
                 g.Flags = new uint[] { FileOffset.Flags };
+                g.SubFileInformationOffset = SubFileInformationStart + FileInfo.SubFile_Index * 16;
             }
 
             return g;

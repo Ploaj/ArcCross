@@ -16,10 +16,27 @@ namespace CrossArc.GUI
 
     public class FolderNode : TreeNode
     {
+        public List<TreeNode> SubNodes = new List<TreeNode>();
+
         public FolderNode(string text)
         {
             this.Text = text;
             ContextMenu = Form1.NodeContextMenu;
+            AfterCollapse();
+        }
+
+
+        public void BeforeExpand()
+        {
+            if (IsExpanded) return;
+            Nodes.Clear();
+            Nodes.AddRange(SubNodes.OrderBy(f => f.Text).ToArray());
+        }
+
+        public void AfterCollapse()
+        {
+            Nodes.Clear();
+            Nodes.Add(new TreeNode("Dummy"));
         }
 
         public void Extract(bool compressed = false)
