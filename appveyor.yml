@@ -1,0 +1,38 @@
+configuration: Release
+
+image: Visual Studio 2017
+
+branches:
+  only:
+    - master
+
+before_build:
+- ps: nuget restore
+
+build:
+  verbosity: minimal
+
+deploy:
+  tag: LatestCommit
+  release: ArcCross [Latest Commit]
+  description: 'This build is updated every time a commit is pushed to the master branch.\n\nMessage: $(APPVEYOR_REPO_COMMIT_MESSAGE)\n\n Timestamp: $(APPVEYOR_REPO_COMMIT_TIMESTAMP)'
+  provider: GitHub
+  auth_token:
+    secure: xauaTCyRR7zXmIIk4uXxttIa2s/DKhiMVYbGn6BMy/suM2ow6gUe0GNrnS+d1Q/q
+  artifact: ArcCross.zip
+  draft: false
+  prerelease: true
+  force_update: true
+  on:
+    branch: master
+
+after_build:
+  - 7z a "ArcCross.zip" "%APPVEYOR_BUILD_FOLDER%\CrossArc\bin\Release\CrossArc.exe"
+  - 7z a "ArcCross.zip" "%APPVEYOR_BUILD_FOLDER%\CrossArc\bin\Release\CrossArc.exe.config"
+  - 7z a "ArcCross.zip" "%APPVEYOR_BUILD_FOLDER%\CrossArc\bin\Release\x64"
+  - 7z a "ArcCross.zip" "%APPVEYOR_BUILD_FOLDER%\CrossArc\bin\Release\x86"
+  - 7z a "ArcCross.zip" "%APPVEYOR_BUILD_FOLDER%\CrossArc\bin\Release\Hashes.txt"
+  - 7z a "ArcCross.zip" "%APPVEYOR_BUILD_FOLDER%\CrossArc\bin\Release\netstandard.dll"
+  - 7z a "ArcCross.zip" "%APPVEYOR_BUILD_FOLDER%\CrossArc\bin\Release\System.Buffers.dll"
+  - 7z a "ArcCross.zip" "%APPVEYOR_BUILD_FOLDER%\CrossArc\bin\Release\Zstandard.Net.dll"
+  - appveyor PushArtifact "ArcCross.zip"
