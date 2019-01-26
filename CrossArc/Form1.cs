@@ -159,6 +159,7 @@ namespace CrossArc
             }*/
 
             // Files
+            long TotalSize = 0;
             var timer = new Stopwatch();
             timer.Start();
             if (ARC.FileInformation != null)
@@ -185,11 +186,13 @@ namespace CrossArc
                         fNode._rFlags = g.Flags;
                         fNode.FullFilePath = g.Path + g.FileName;
                     }
-                    
+
+                    TotalSize += fNode.DecompSize;
                     Folder.SubNodes.Add(fNode);
                 }
             timer.Stop();
             Debug.WriteLine("To load files into tree: " + timer.ElapsedMilliseconds);
+            Debug.WriteLine("Total File Size: " + FormatBytes(TotalSize));
 
             /*string[] folders = ARC.GetPaths();
             foreach(string s in folders)
@@ -219,13 +222,26 @@ namespace CrossArc
                     });
                 }
             }*/
-            
+
             fileTree.BeginUpdate();
             fileTree.Nodes.Add(Root);
             fileTree.Nodes.Add(BGM);
             fileTree.EndUpdate();
 
             //DumpWithExtension(".nuanmb");
+        }
+
+        private static string FormatBytes(long bytes)
+        {
+            string[] Suffix = { "B", "KB", "MB", "GB", "TB" };
+            int i;
+            double dblSByte = bytes;
+            for (i = 0; i < Suffix.Length && bytes >= 1024; i++, bytes /= 1024)
+            {
+                dblSByte = bytes / 1024.0;
+            }
+
+            return String.Format("{0:0.##} {1}", dblSByte, Suffix[i]);
         }
 
         private void folderTree_BeforeExpand(object sender, TreeViewCancelEventArgs e)

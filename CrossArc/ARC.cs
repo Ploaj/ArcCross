@@ -815,15 +815,13 @@ namespace CrossArc
 
             using (StreamWriter writer = new StreamWriter(new FileStream("ChangeLog.txt", FileMode.Create)))
             {
-                writer.WriteLine("New Files:-----------------------------------------------------------------");
                 foreach (var f in New)
                 {
-                    writer.WriteLine(f);
+                    writer.WriteLine($"Added: {f}");
                 }
-                writer.WriteLine("Changed Files:-----------------------------------------------------------------");
                 foreach(var f in Changed)
                 {
-                    writer.WriteLine(f);
+                    writer.WriteLine($"Changed: {f}");
                 }
             }
         }
