@@ -30,6 +30,8 @@ namespace CrossArc
     {
         public static string FilePath = "data.arc";
 
+        private static int ArcVersion = 1;
+
         public static _sArcHeader Header;
         public static _sBGMHashToName[] BGMHashToName;
         public static _sBGMNameToHash[] BGMNameToHash;
@@ -42,6 +44,12 @@ namespace CrossArc
         public static _SubFileInfo[] SubFileInformation_1;
         public static _SubFileInfo[] SubFileInformation_2;
         public static _sBGMOffset[] BGMOffsets;
+
+        // Arc v2 exclusive
+        public static _sFileInformationV2[] FileInformationV2;
+        public static _sFileInformationPath[] FileInformationPath;
+        public static _sFileInformationIndex[] FileInformationIndex;
+        public static _sFileInformationSubIndex[] FileInformationSubIndex;
 
         // for speed
         public static Dictionary<uint, _sDirectoryList> FolderHashDict;
@@ -113,7 +121,6 @@ namespace CrossArc
                     DecompTableData = (R.ReadBytes((int)(R.BaseStream.Length - R.BaseStream.Position)));
                 }
 
-
                 /*R.BaseStream.Seek(Header.UnkSectionOffset, SeekOrigin.Begin);
                 using (BinaryWriter writer = new BinaryWriter(DecompRegionalTables))
                 {
@@ -168,7 +175,20 @@ namespace CrossArc
                 return;*/
             }
 
-            using (BinaryReader R = new BinaryReader(new MemoryStream(DecompTableData)))
+
+            if (Header.FileSectionOffset >= 0x8824AF68)
+            {
+                ArcVersion = 2;
+                ReadV2Arc(DecompTableData);
+            }
+            else
+                ReadV1Arc(DecompTableData);
+        }
+
+
+        private static void ReadV1Arc(byte[] TableData)
+        {
+            using (BinaryReader R = new BinaryReader(new MemoryStream(TableData)))
             {
                 R.BaseStream.Position = 0;
                 _sNodeHeader NodeHeader = ByteToType<_sNodeHeader>(R);
@@ -266,8 +286,8 @@ namespace CrossArc
                 }*/
 
 
-                
-                
+
+
 
 
                 //Debug.WriteLine((Header.FileSectionOffset + DirectoryOffsets_1[510].Offset).ToString("X"));
@@ -309,9 +329,7 @@ namespace CrossArc
                         /*var Directory = DirectoryLists[item.DirectoryIndex >> 8];
                         var DirectoryOffset = DirectoryOffsets_1[(Directory.DirOffsetIndex>>8)];
                         _sDirectoryOffsets DirectoryOffset2 = DirectoryOffset;
-
                         var FileOffset = SubFileInformation_1[item.SubFile_Index];
-
                         if((DirectoryOffset.ResourceIndex & 0xFFFFFF) != 0xFFFFFF)
                         {
                             DirectoryOffset2 = DirectoryOffsets_2[(DirectoryOffset.ResourceIndex>>8) & 0xFFFFFF];
@@ -338,7 +356,121 @@ namespace CrossArc
             }
         }
 
+
+        private static void ReadV2Arc(byte[] TableData)
+        {
+            using (BinaryReader R = new BinaryReader(new MemoryStream(TableData)))
+            {
+                R.BaseStream.Position = 0;
+                _sNodeHeaderv2 NodeHeader = ByteToType<_sNodeHeaderv2>(R);
+                //PrintStruct<_sNodeHeader>(NodeHeader);
+
+                R.BaseStream.Seek(0x3C, SeekOrigin.Begin);
+
+                // Unknown?? maybe something with languages
+                R.BaseStream.Seek(0xE * 12, SeekOrigin.Current);
+
+                // Another structure
+                _sNodeHeaderv2_2 NodeHeader2 = ByteToType<_sNodeHeaderv2_2>(R);
+                
+                // Hash Table
+                R.BaseStream.Seek(0x8 * NodeHeader2.Part1Count, SeekOrigin.Current);
+
+                // Hash Table 2
+                R.BaseStream.Seek(0xC * NodeHeader2.Part1Count, SeekOrigin.Current);
+
+                // Hash Table 3
+                R.BaseStream.Seek(0x4 * NodeHeader2.Part2Count, SeekOrigin.Current);
+
+                // I don't know really
+                R.BaseStream.Seek(0x10 * NodeHeader2.Part3Size, SeekOrigin.Current);
+
+                int UnkCount1 = R.ReadInt32();
+                int UnkCount2 = R.ReadInt32();
+                R.BaseStream.Seek(0x8 * UnkCount2, SeekOrigin.Current);
+                R.BaseStream.Seek(0x8 * UnkCount1, SeekOrigin.Current);
+
+                Debug.WriteLine("FilePathInfo " + R.BaseStream.Position.ToString("X"));
+                FileInformationPath = ReadArray<_sFileInformationPath>(R, NodeHeader.UnkCount);
+
+                // Start of first node header section
+                Debug.WriteLine("SomeIndicesForFileInformation " + R.BaseStream.Position.ToString("X"));
+                FileInformationIndex = ReadArray<_sFileInformationIndex>(R, NodeHeader.UnkOffsetSizeCount);
+
+                // Start of first node header section
+                Debug.WriteLine("FolderHashes " + R.BaseStream.Position.ToString("X"));
+                R.BaseStream.Seek(0x8 * NodeHeader.FolderCount, SeekOrigin.Current);
+
+                //folders
+
+                Debug.WriteLine("FolderHashes " + R.BaseStream.Position.ToString("X"));
+                DirectoryLists = ReadArray<_sDirectoryList>(R, NodeHeader.FolderCount);
+
+                //file offsets
+
+                Debug.WriteLine("fileoffsets " + R.BaseStream.Position.ToString("X"));
+                DirectoryOffsets_1 = ReadArray<_sDirectoryOffsets>(R, NodeHeader.FileCount1);
+                DirectoryOffsets_2 = ReadArray<_sDirectoryOffsets>(R, NodeHeader.FileCount2);
+
+                Debug.WriteLine("hashfolderoffset " + R.BaseStream.Position.ToString("X"));
+                HashFolderCounts = ReadArray<_sFolderHashIndex>(R, NodeHeader.HashFolderCount);
+                
+                Debug.WriteLine("fileinformationoffset " + R.BaseStream.Position.ToString("X"));
+                FileInformationV2 = ReadArray<_sFileInformationV2>(R, NodeHeader.FileInformationCount + NodeHeader.SubFileCount2);
+
+                Debug.WriteLine("sub index table " + R.BaseStream.Position.ToString("X"));
+                FileInformationSubIndex = ReadArray<_sFileInformationSubIndex>(R, (NodeHeader.LastTableCount + NodeHeader.SubFileCount2));
+
+                Debug.WriteLine("subfileoffset " + R.BaseStream.Position.ToString("X"));
+                SubFileInformationStart = R.BaseStream.Position;
+                SubFileInformation_1 = ReadArray<_SubFileInfo>(R, NodeHeader.SubFileCount);
+                SubFileInformationStart2 = R.BaseStream.Position;
+                SubFileInformation_2 = ReadArray<_SubFileInfo>(R, NodeHeader.SubFileCount2);
+
+                int max = 0;
+                foreach(var dir in FileInformationSubIndex)
+                {
+                    max = Math.Max(max, (int)dir.SomeIndex1);
+                }
+                Console.WriteLine("Directory index " + max.ToString("X") + " " + (DirectoryLists.Length).ToString("X") + " " + (DirectoryOffsets_1.Length + DirectoryOffsets_2.Length).ToString("X"));
+                
+
+                FolderHashDict = new Dictionary<uint, _sDirectoryList>();
+                foreach (_sDirectoryList fh in DirectoryLists)
+                {
+                    FolderHashDict.Add(fh.HashID, fh);
+                }
+
+                foreach (_sDirectoryOffsets chunk in DirectoryOffsets_1)
+                {
+                    for (int i = 0; i < chunk.SubDataCount; i++)
+                        if (!ChunkHash1.ContainsKey((int)chunk.SubDataStartIndex + i))
+                            ChunkHash1.Add((int)chunk.SubDataStartIndex + i, chunk);
+                }
+                foreach (_sDirectoryOffsets chunk in DirectoryOffsets_2)
+                {
+                    for (int i = 0; i < chunk.SubDataCount; i++)
+                        if (!ChunkHash2.ContainsKey((int)chunk.SubDataStartIndex + i))
+                            ChunkHash2.Add((int)chunk.SubDataStartIndex + i, chunk);
+                }
+
+                
+            }
+        }
+
+
+
         public static List<FileOffsetGroup> GetFiles()
+        {
+            Console.WriteLine("Version " + ArcVersion + " " + (ArcVersion == 2));
+            if (ArcVersion == 2)
+                return GetFilesV2();
+            else
+                return GetFilesV1();
+        }
+
+
+        public static List<FileOffsetGroup> GetFilesV1()
         {
             List<FileOffsetGroup> Files = new List<FileOffsetGroup>(FileInformation.Length);
             int index = 0;
@@ -346,7 +478,7 @@ namespace CrossArc
             {
                 var Directory = DirectoryLists[item.DirectoryIndex >> 8];
                 var OffsetGroup = GetFileInformation(item);
-                if((item.FileTableFlag >> 8) > 0)
+                if ((item.FileTableFlag >> 8) > 0)
                 {
                     for (int i = 1; i < 0xE; i++)
                     {
@@ -365,7 +497,7 @@ namespace CrossArc
                 }
 
                 OffsetGroup.FileNameHash = item.Hash2;
-                OffsetGroup.PathHash= item.Parent;
+                OffsetGroup.PathHash = item.Parent;
                 string Extension = "";
                 HashDict.TryGetValue(item.Extension, out Extension);
                 if (Extension != "") Extension = "." + Extension;
@@ -377,28 +509,131 @@ namespace CrossArc
             return Files;
         }
 
-        public static FileOffsetGroup GetFileInformation(_sFileInformation FileInfo, int RegionalIndex = 0)
+        public static List<FileOffsetGroup> GetFilesV2()
+        {
+            List<FileOffsetGroup> Files = new List<FileOffsetGroup>(FileInformationV2.Length);
+            int index = 0;
+            Console.WriteLine("Files " + FileInformationV2.Length);
+            foreach (var item in FileInformationV2)
+            {
+                var PathInfo = FileInformationPath[item.HashIndex];
+                //var Directory = DirectoryLists[PathInfo.DirectoryIndex >> 8];
+                var OffsetGroup = GetFileInformation(item);
+                if ((item.Flags & 0xF000) == 0x8000)
+                {
+                    for (int i = 1; i < 0xE; i++)
+                    {
+                        var OffsetGroup2 = GetFileInformation(item, i);
+                        Array.Resize(ref OffsetGroup.ArcOffset, OffsetGroup.ArcOffset.Length + 1);
+                        OffsetGroup.ArcOffset[OffsetGroup.ArcOffset.Length - 1] = OffsetGroup2.ArcOffset[0];
+                        Array.Resize(ref OffsetGroup.Offset, OffsetGroup.Offset.Length + 1);
+                        OffsetGroup.Offset[OffsetGroup.Offset.Length - 1] = OffsetGroup2.Offset[0];
+                        Array.Resize(ref OffsetGroup.CompSize, OffsetGroup.CompSize.Length + 1);
+                        OffsetGroup.CompSize[OffsetGroup.CompSize.Length - 1] = OffsetGroup2.CompSize[0];
+                        Array.Resize(ref OffsetGroup.DecompSize, OffsetGroup.DecompSize.Length + 1);
+                        OffsetGroup.DecompSize[OffsetGroup.DecompSize.Length - 1] = OffsetGroup2.DecompSize[0];
+                        Array.Resize(ref OffsetGroup.Flags, OffsetGroup.Flags.Length + 1);
+                        OffsetGroup.Flags[OffsetGroup.Flags.Length - 1] = OffsetGroup2.Flags[0];
+                    }
+                }
+
+                OffsetGroup.FileNameHash = PathInfo.Hash2;
+                OffsetGroup.PathHash = PathInfo.Parent;
+                string Extension = "";
+                HashDict.TryGetValue(PathInfo.Extension, out Extension);
+                if (Extension != "") Extension = "." + Extension;
+                OffsetGroup.FileName = GetName(PathInfo.Hash2, Extension);
+                /*if ( OffsetGroup.FileName.Equals("vc_bayonetta.nus3audio"))////
+                {
+                    int sindex = 0;
+                    foreach(var sb in SubFileInformation_1)
+                    {
+                        if(sb.DecompSize == 0x107810)
+                        {
+                            Console.WriteLine(OffsetGroup.FileName + " " + sindex.ToString("X") + " " + sb.CompSize.ToString("X"));
+                        }
+                        sindex++;
+                    }
+                    sindex = 0;
+                    foreach (var sb in FileInformationSubIndex)
+                    {
+                        if(sb.SomeIndex2 == 0x31DF)
+                        {
+                            Console.WriteLine(OffsetGroup.FileName + " " + sindex.ToString("X") + " " + sb.SomeIndex3.ToString("X"));
+
+                        }
+                        sindex++;
+                    }
+                    var subinfo = FileInformationSubIndex[item.SubFile_Index + 1];
+                    var regionalsubfile = SubFileInformation_1[subinfo.SomeIndex2];
+                    Console.WriteLine(OffsetGroup.FileName + " " + regionalsubfile.DecompSize.ToString("X") + " " + item.SubFile_Index.ToString("X") + " " + PathInfo.FileTableFlag.ToString("X") + " " + subinfo.SomeIndex1.ToString("X") + " " + subinfo.SomeIndex2.ToString("X") + " " + subinfo.SomeIndex3.ToString("X") + " " + item.Flags.ToString("X"));
+                }
+                if(item.Flags == 0x8010)
+                {
+                    //Console.WriteLine(OffsetGroup.FileName);
+                    var subinfo = FileInformationSubIndex[item.SubFile_Index];
+                    var regionalsubfile = SubFileInformation_1[item.HashIndex2];
+                    //Console.WriteLine(OffsetGroup.FileName + " " + item.HashIndex2.ToString("X") + " " + regionalsubfile.DecompSize.ToString("X"));
+
+                }*/
+                OffsetGroup.Path = GetName(PathInfo.Parent);
+                Files.Add(OffsetGroup);
+                index++;
+            }
+            return Files;
+        }
+
+        private static FileOffsetGroup GetFileInformation(_sFileInformation FileInfo, int RegionalIndex = 0)
+        {
+            return GetFileInformation(FileInfo.SubFile_Index, (FileInfo.FileTableFlag >> 8), DirectoryLists[FileInfo.DirectoryIndex >> 8].DirOffsetIndex >> 8, RegionalIndex);
+        }
+
+        private static FileOffsetGroup GetFileInformation(_sFileInformationV2 FileInfo, int RegionalIndex = 0)
+        {
+            bool Regional = FileInfo.Flags == 0x8010;
+            var path = FileInformationPath[FileInfo.HashIndex];
+            var dirinfo = FileInformationIndex[FileInfo.HashIndex2 + (Regional ? RegionalIndex + 1 : 0)];
+            var subinfo = FileInformationSubIndex[FileInfo.SubFile_Index + (Regional ? RegionalIndex + 1 : 0)];
+            return GetFileInformation(subinfo.SomeIndex2, 0, subinfo.SomeIndex1, RegionalIndex);
+        }
+
+        private static FileOffsetGroup GetFileInformation(uint SubFile_Index, uint RegionalOffset, uint DirectoryIndex, int RegionalIndex = 0)
         {
             FileOffsetGroup g = new FileOffsetGroup();
-            
+
             // Get File Data
-            var FileOffset = SubFileInformation_1[FileInfo.SubFile_Index];
 
-            // Get Directoryies
-            var Directory = DirectoryLists[FileInfo.DirectoryIndex >> 8];
-            var DirectoryOffset = DirectoryOffsets_1[(Directory.DirOffsetIndex >> 8)];
-            _sDirectoryOffsets DirectoryOffset2 = DirectoryOffset;
+            _SubFileInfo FileOffset;
+            if(SubFile_Index < SubFileInformation_1.Length)
+                FileOffset = SubFileInformation_1[SubFile_Index];
+            else
+                FileOffset = SubFileInformation_2[SubFile_Index - SubFileInformation_1.Length];
 
-            if ((FileInfo.FileTableFlag >> 8) > 0)
+            _sDirectoryOffsets DirectoryOffset;
+            if(DirectoryIndex < DirectoryOffsets_1.Length)
+                DirectoryOffset = DirectoryOffsets_1[DirectoryIndex];
+            else
+                DirectoryOffset = DirectoryOffsets_2[DirectoryIndex - DirectoryOffsets_1.Length];
+            var DirectoryOffset2 = DirectoryOffset;
+
+            if (RegionalOffset > 0)
             {
-                FileOffset = SubFileInformation_1[(FileInfo.FileTableFlag >> 8) + RegionalIndex];
-                DirectoryOffset = DirectoryOffsets_1[(Directory.DirOffsetIndex >> 8) + 1 + RegionalIndex];
+                FileOffset = SubFileInformation_1[RegionalOffset + RegionalIndex];
+                DirectoryIndex = (uint)(DirectoryIndex + 1 + RegionalIndex);
+                if (DirectoryIndex < DirectoryOffsets_1.Length)
+                    DirectoryOffset = DirectoryOffsets_1[DirectoryIndex];
+                else
+                    DirectoryOffset = DirectoryOffsets_2[DirectoryIndex - DirectoryOffsets_1.Length];
                 DirectoryOffset2 = DirectoryOffset;
             }
             else
             if ((DirectoryOffset.ResourceIndex & 0xFFFFFF) != 0xFFFFFF)
             {
-                DirectoryOffset2 = DirectoryOffsets_2[((DirectoryOffset.ResourceIndex - DirectoryOffsets_1.Length) & 0xFFFFFF)];
+                if(DirectoryOffset.ResourceIndex < DirectoryOffsets_1.Length)
+                    DirectoryOffset2 = DirectoryOffsets_1[((DirectoryOffset.ResourceIndex) & 0xFFFFFF)];
+                else
+                    DirectoryOffset2 = DirectoryOffsets_2[((DirectoryOffset.ResourceIndex - DirectoryOffsets_1.Length) & 0xFFFFFF)];
+                
             }
 
             // Parse Flags
@@ -407,9 +642,25 @@ namespace CrossArc
             bool External = (flag & 0x08) == 0x08;
             int ExternalOffset = (int)FileOffset.Flags & 0xFFFFFF;
 
+            if((ArcVersion == 2))
+            {
+                // why did they do this
+                flag = ((int)FileOffset.Flags & 0xFF);
+                Compressed = (flag & 0x03) == 0x03;
+                External = (flag & 0x08) == 0x08;
+                ExternalOffset = (int)FileOffset.Flags >> 8;
+            }
+
             if (ExternalOffset > 0 && !External)
             {
-                return GetFileInformation(FileInformation[ExternalOffset]);
+                if (ArcVersion == 2)
+                {
+                    return GetFileInformation(FileInformationV2[ExternalOffset]);
+                }
+                else
+                {
+                    return GetFileInformation(FileInformation[ExternalOffset]);
+                }
             }
 
             if (External)
@@ -417,21 +668,6 @@ namespace CrossArc
                 //hack
                 DirectoryOffset2 = ChunkHash2[ExternalOffset];
                 FileOffset = SubFileInformation_2[ExternalOffset];
-                /*while (ExternalOffset < DirectoryOffset2.SubDataStartIndex ||
-                    ExternalOffset >= DirectoryOffset2.SubDataStartIndex + DirectoryOffset.SubDataCount)
-                {
-                    if ((DirectoryOffset2.ResourceIndex&0xFFFFFF) == 0xFFFFFF) break;
-                    DirectoryOffset2 = DirectoryOffsets_2[((DirectoryOffset2.ResourceIndex - DirectoryOffsets_1.Length) & 0xFFFFFF)];
-                }*/
-
-                /*if (DirectoryOffset2.SubDataStartIndex > ExternalOffset || DirectoryOffset2.SubDataStartIndex + DirectoryOffset.SubDataCount < ExternalOffset)
-                {
-                    Console.WriteLine((DirectoryOffsets_1.Length + DirectoryOffsets_2.Length).ToString("X") + " " + 
-                        ExternalOffset + " " + 
-                        DirectoryOffset2.SubDataStartIndex + " " + 
-                        (DirectoryOffset.ResourceIndex).ToString("X") + " " + 
-                        DirectoryOffsets_2.Length.ToString("X"));
-                }*/
 
                 g.ArcOffset = new long[] { (Header.FileSectionOffset + DirectoryOffset2.Offset + (FileOffset.Offset << 2)) };
                 g.Offset = new long[] { FileOffset.Offset };
@@ -447,7 +683,7 @@ namespace CrossArc
                 g.CompSize = new long[] { FileOffset.CompSize };
                 g.DecompSize = new long[] { FileOffset.DecompSize };
                 g.Flags = new uint[] { FileOffset.Flags };
-                g.SubFileInformationOffset = SubFileInformationStart + FileInfo.SubFile_Index * 16;
+                g.SubFileInformationOffset = SubFileInformationStart + SubFile_Index * 16;
             }
 
             return g;

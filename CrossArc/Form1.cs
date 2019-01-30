@@ -162,10 +162,11 @@ namespace CrossArc
             long TotalSize = 0;
             var timer = new Stopwatch();
             timer.Start();
-            if (ARC.FileInformation != null)
+            if (ARC.FileInformation != null || ARC.FileInformationV2 != null)
                 foreach (FileOffsetGroup g in ARC.GetFiles())
                 {
                     FolderNode Folder = (FolderNode)GetFolderFromPath(g.Path);
+                    if (g.CompSize == null) continue;
 
                     FileNode fNode = new FileNode(g.FileName)
                     {

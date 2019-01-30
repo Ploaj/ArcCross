@@ -71,7 +71,8 @@ namespace CrossArc.GUI
                     catch(Exception e)
                     {
                         index++;
-                        Update((int)Math.Floor((index / (float)toExtract.Length) * 100), e.ToString());
+                        Update(0, e.ToString());
+                        break;
                     }
                 }
             }

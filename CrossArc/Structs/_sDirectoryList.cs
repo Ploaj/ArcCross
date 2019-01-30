@@ -14,15 +14,18 @@ namespace CrossArc.Structs
         public uint DirOffsetIndex;
         public uint NameHash;
         public uint ParentHash;
+
         public uint Hash4;
         public uint FirstFilIndex;
         public uint unk;
         public uint FirstFileIndex;
+
         public uint FileInformationStartIndex;
         public uint FileInformationCount;
         public uint FileNameStartIndex;
         public short FileNameCount;
         public ushort Unk4;
+
         public uint Unk5;
     }
 }
