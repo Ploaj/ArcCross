@@ -20,7 +20,7 @@ namespace CrossArc.Structs
     {
         public uint Hash;
         public uint NameIndex;
-        public uint Unk;
+        public uint Flags;
     }
 
     [StructLayout(LayoutKind.Sequential)]

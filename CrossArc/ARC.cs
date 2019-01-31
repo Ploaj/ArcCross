@@ -197,20 +197,17 @@ namespace CrossArc
                 //PrintStruct<_sNodeHeader>(NodeHeader);
 
                 R.BaseStream.Seek(0x68, SeekOrigin.Begin);
-
-                //Hash Table
-                //BGMHashToName = ReadArray<_sBGMHashToName>(R, NodeHeader.Part1Count);
+                
+                // Hash Table
                 R.BaseStream.Seek(0x8 * NodeHeader.Part1Count, SeekOrigin.Current);
 
                 // Hash Table 2
-                //BGMNameToHash = ReadArray<_sBGMNameToHash>(R, NodeHeader.Part1Count);
-                R.BaseStream.Seek(0xC * NodeHeader.Part1Count, SeekOrigin.Current);
+                StreamNameToHash = ReadArray<_sStreamNameToHash>(R, NodeHeader.Part1Count);
 
                 // Hash Table 3
-                //BGMIndexToFile = ReadArray<_sBGMIndexToFile>(R, NodeHeader.Part1Count);
-                R.BaseStream.Seek(0x4 * NodeHeader.Part2Count, SeekOrigin.Current);
+                StreamIndexToFile = ReadArray<_sStreamIndexToFile>(R, NodeHeader.Part2Count);
 
-                //Console.WriteLine(R.BaseStream.Position.ToString("X") + " " + NodeHeader.MusicFileCount.ToString("X"));
+                // stream offsets
                 StreamOffsets = ReadArray<_sStreamOffset>(R, NodeHeader.MusicFileCount);
 
                 // Another Hash Table
@@ -468,10 +465,7 @@ namespace CrossArc
 
         public static List<FileOffsetGroup> GetStreamFiles()
         {
-            if (ArcVersion == 2)
-                return GetStreamFilesV2();
-            else
-                return new List<FileOffsetGroup>();
+            return GetStreamFilesV2();
         }
 
         private static List<FileOffsetGroup> GetStreamFilesV2()
@@ -480,14 +474,38 @@ namespace CrossArc
 
             foreach(var streamfile in StreamNameToHash)
             {
-                var streamindex = StreamIndexToFile[streamfile.NameIndex >> 8].FileIndex;
-                var offset = StreamOffsets[streamindex];
-
                 FileOffsetGroup group = new FileOffsetGroup();
                 group.FileName = GetName(streamfile.Hash);
-                group.ArcOffset = new long[] { offset.Offset };
-                group.CompSize = new long[] { offset.Size };
-                group.DecompSize = new long[] { offset.Size };
+
+                if (streamfile.Flags == 1 || streamfile.Flags == 2)
+                {
+                    int size = 0xE;
+                    group.ArcOffset = new long[size];
+                    group.CompSize = new long[size];
+                    group.DecompSize = new long[size];
+                    group.Flags = new uint[size];
+                    if (streamfile.Flags == 2)
+                        size = 0x5;
+                    for (int i = 0; i < size; i++)
+                    {
+                        var streamindex = StreamIndexToFile[(streamfile.NameIndex >> 8) + i].FileIndex;
+                        var offset = StreamOffsets[streamindex];
+                        group.ArcOffset[i] = offset.Offset;
+                        group.CompSize[i] = offset.Size;
+                        group.DecompSize[i] = offset.Size;
+                        group.Flags[i] = streamfile.Flags;
+                    }
+                }
+                else
+                {
+                    var streamindex = StreamIndexToFile[streamfile.NameIndex >> 8].FileIndex;
+                    var offset = StreamOffsets[streamindex];
+                    group.ArcOffset = new long[] { offset.Offset };
+                    group.CompSize = new long[] { offset.Size };
+                    group.DecompSize = new long[] { offset.Size };
+                    group.Flags = new uint[] { streamfile.Flags };
+                }
+
                 streamfiles.Add(group);
             }
             return streamfiles;

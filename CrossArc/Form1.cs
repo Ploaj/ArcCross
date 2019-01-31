@@ -202,8 +202,19 @@ namespace CrossArc
                     ArcOffset = g.ArcOffset[0],
                     CompSize = (uint)g.CompSize[0],
                     DecompSize = (uint)g.DecompSize[0],
+                    Flags = g.Flags[0],
                     FullFilePath = FPath
                 };
+                
+                if ((g.ArcOffset.Length > 1))
+                {
+                    fNode.IsRegional = true;
+                    fNode._rArcOffset = g.ArcOffset;
+                    fNode._rCompSize = g.CompSize;
+                    fNode._rDecompSize = g.DecompSize;
+                    fNode._rFlags = g.Flags;
+                    fNode.FullFilePath = FPath;
+                }
 
                 Folder.SubNodes.Add(fNode);
             }
@@ -371,7 +382,7 @@ namespace CrossArc
                         flagLabel.Text = "0x0";
                         return;
                     }
-                    if (regionCB.SelectedIndex == -1)
+                    if (regionCB.SelectedIndex == -1 )
                         regionCB.SelectedIndex = 0;
                     //regionCB.Visible = true;
                     offLabel.Text = "0x" + n._rArcOffset[regionCB.SelectedIndex].ToString("X");
