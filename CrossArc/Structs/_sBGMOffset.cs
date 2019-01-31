@@ -9,14 +9,14 @@ namespace CrossArc.Structs
 {
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct _sBGMHashToName
+    public struct _sStreamHashToName
     {
         public uint Hash;
         public uint NameIndex;
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct _sBGMNameToHash
+    public struct _sStreamNameToHash
     {
         public uint Hash;
         public uint NameIndex;
@@ -24,13 +24,13 @@ namespace CrossArc.Structs
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct _sBGMIndexToFile
+    public struct _sStreamIndexToFile
     {
         public int FileIndex;
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct _sBGMOffset
+    public struct _sStreamOffset
     {
         public long Size;
         public long Offset;

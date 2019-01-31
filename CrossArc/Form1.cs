@@ -11,7 +11,7 @@ namespace CrossArc
     public partial class Form1 : Form
     {
         FolderNode Root = new FolderNode("root");
-        FolderNode BGM = new FolderNode("music");
+        FolderNode Stream = new FolderNode("stream");
 
         public static int SelectedRegion = 0;
 
@@ -165,7 +165,7 @@ namespace CrossArc
             if (ARC.FileInformation != null || ARC.FileInformationV2 != null)
                 foreach (FileOffsetGroup g in ARC.GetFiles())
                 {
-                    FolderNode Folder = (FolderNode)GetFolderFromPath(g.Path);
+                    FolderNode Folder = (FolderNode)GetFolderFromPath(g.Path, Root);
                     if (g.CompSize == null) continue;
 
                     FileNode fNode = new FileNode(g.FileName)
@@ -191,6 +191,23 @@ namespace CrossArc
                     TotalSize += fNode.DecompSize;
                     Folder.SubNodes.Add(fNode);
                 }
+
+            foreach(var g in ARC.GetStreamFiles())
+            {
+                string FPath = g.FileName.Replace("stream:/", "");
+                FolderNode Folder = (FolderNode)GetFolderFromPath(Path.GetDirectoryName(FPath).Replace("\\", "/"), Stream);
+
+                FileNode fNode = new FileNode(Path.GetFileName(FPath))
+                {
+                    ArcOffset = g.ArcOffset[0],
+                    CompSize = (uint)g.CompSize[0],
+                    DecompSize = (uint)g.DecompSize[0],
+                    FullFilePath = FPath
+                };
+
+                Folder.SubNodes.Add(fNode);
+            }
+
             timer.Stop();
             Debug.WriteLine("To load files into tree: " + timer.ElapsedMilliseconds);
             Debug.WriteLine("Total File Size: " + FormatBytes(TotalSize));
@@ -226,7 +243,7 @@ namespace CrossArc
 
             fileTree.BeginUpdate();
             fileTree.Nodes.Add(Root);
-            fileTree.Nodes.Add(BGM);
+            fileTree.Nodes.Add(Stream);
             fileTree.EndUpdate();
 
             //DumpWithExtension(".nuanmb");
@@ -298,10 +315,10 @@ namespace CrossArc
             }
         }
 
-        public TreeNode GetFolderFromPath(string path)
+        public TreeNode GetFolderFromPath(string path, FolderNode root)
         {
             string[] levels = path.Split('/');
-            var Level = Root.SubNodes;
+            var Level = root.SubNodes;
             FolderNode Node = null;
             for (int i = 0; i < levels.Length; i++)
             {
@@ -315,6 +332,8 @@ namespace CrossArc
                 }
                 Level = Node.SubNodes;
             }
+            if (Node == null)
+                return new FolderNode(path);
             return Node;
         }
 

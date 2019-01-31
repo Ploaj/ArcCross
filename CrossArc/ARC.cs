@@ -33,9 +33,6 @@ namespace CrossArc
         private static int ArcVersion = 1;
 
         public static _sArcHeader Header;
-        public static _sBGMHashToName[] BGMHashToName;
-        public static _sBGMNameToHash[] BGMNameToHash;
-        public static _sBGMIndexToFile[] BGMIndexToFile;
         public static _sDirectoryOffsets[] DirectoryOffsets_1;
         public static _sDirectoryOffsets[] DirectoryOffsets_2;
         public static _sDirectoryList[] DirectoryLists;
@@ -43,7 +40,12 @@ namespace CrossArc
         public static _sFolderHashIndex[] HashFolderCounts;
         public static _SubFileInfo[] SubFileInformation_1;
         public static _SubFileInfo[] SubFileInformation_2;
-        public static _sBGMOffset[] BGMOffsets;
+
+        // Stream Stuff
+        public static _sStreamHashToName[] StreamHashToName;
+        public static _sStreamNameToHash[] StreamNameToHash;
+        public static _sStreamIndexToFile[] StreamIndexToFile;
+        public static _sStreamOffset[] StreamOffsets;
 
         // Arc v2 exclusive
         public static _sFileInformationV2[] FileInformationV2;
@@ -209,7 +211,7 @@ namespace CrossArc
                 R.BaseStream.Seek(0x4 * NodeHeader.Part2Count, SeekOrigin.Current);
 
                 //Console.WriteLine(R.BaseStream.Position.ToString("X") + " " + NodeHeader.MusicFileCount.ToString("X"));
-                BGMOffsets = ReadArray<_sBGMOffset>(R, NodeHeader.MusicFileCount);
+                StreamOffsets = ReadArray<_sStreamOffset>(R, NodeHeader.MusicFileCount);
 
                 // Another Hash Table
                 Debug.WriteLine("RegionalHashList " + R.BaseStream.Position.ToString("X"));
@@ -372,19 +374,24 @@ namespace CrossArc
 
                 // Another structure
                 _sNodeHeaderv2_2 NodeHeader2 = ByteToType<_sNodeHeaderv2_2>(R);
-                
+
                 // Hash Table
+                Console.WriteLine("Hash table 1 " + R.BaseStream.Position.ToString("X"));
                 R.BaseStream.Seek(0x8 * NodeHeader2.Part1Count, SeekOrigin.Current);
 
                 // Hash Table 2
-                R.BaseStream.Seek(0xC * NodeHeader2.Part1Count, SeekOrigin.Current);
+                Console.WriteLine("StreamToHash table 2 " + R.BaseStream.Position.ToString("X"));
+                StreamNameToHash = ReadArray<_sStreamNameToHash>(R, NodeHeader2.Part1Count);
 
                 // Hash Table 3
-                R.BaseStream.Seek(0x4 * NodeHeader2.Part2Count, SeekOrigin.Current);
+                Console.WriteLine("Hash table 3 " + R.BaseStream.Position.ToString("X"));
+                StreamIndexToFile = ReadArray<_sStreamIndexToFile>(R, NodeHeader2.Part2Count);
 
-                // I don't know really
-                R.BaseStream.Seek(0x10 * NodeHeader2.Part3Size, SeekOrigin.Current);
+                // stream offsets
+                Console.WriteLine("Hash table 4 " + R.BaseStream.Position.ToString("X"));
+                StreamOffsets = ReadArray<_sStreamOffset>(R, NodeHeader2.Part3Size);
 
+                Console.WriteLine("Hash table 5 " + R.BaseStream.Position.ToString("X"));
                 int UnkCount1 = R.ReadInt32();
                 int UnkCount2 = R.ReadInt32();
                 R.BaseStream.Seek(0x8 * UnkCount2, SeekOrigin.Current);
@@ -458,6 +465,33 @@ namespace CrossArc
             }
         }
 
+
+        public static List<FileOffsetGroup> GetStreamFiles()
+        {
+            if (ArcVersion == 2)
+                return GetStreamFilesV2();
+            else
+                return new List<FileOffsetGroup>();
+        }
+
+        private static List<FileOffsetGroup> GetStreamFilesV2()
+        {
+            var streamfiles = new List<FileOffsetGroup>(StreamNameToHash.Length);
+
+            foreach(var streamfile in StreamNameToHash)
+            {
+                var streamindex = StreamIndexToFile[streamfile.NameIndex >> 8].FileIndex;
+                var offset = StreamOffsets[streamindex];
+
+                FileOffsetGroup group = new FileOffsetGroup();
+                group.FileName = GetName(streamfile.Hash);
+                group.ArcOffset = new long[] { offset.Offset };
+                group.CompSize = new long[] { offset.Size };
+                group.DecompSize = new long[] { offset.Size };
+                streamfiles.Add(group);
+            }
+            return streamfiles;
+        }
 
 
         public static List<FileOffsetGroup> GetFiles()
@@ -977,6 +1011,7 @@ namespace CrossArc
             {
                 reader.ReadUInt32();
                 uint FileCount = reader.ReadUInt32();
+                FileCount = (uint)(reader.BaseStream.Length - 8) / 12;
                 var Hashes = ReadArray<HashCompareCheck>(reader, FileCount);
                 foreach(var f in Hashes)
                 {
@@ -1001,6 +1036,7 @@ namespace CrossArc
             {
                 reader.ReadUInt32();
                 uint FileCount = reader.ReadUInt32();
+                FileCount = (uint)(reader.BaseStream.Length - 8) / 12;
                 var Hashes = ReadArray<HashCompareCheck>(reader, FileCount);
                 Dictionary<long, object> Keys = new Dictionary<long, object>();
                 foreach (var f in Hashes)
@@ -1082,6 +1118,8 @@ namespace CrossArc
                             Console.WriteLine($"{Percent}% Done");
                             Percent++;
                         }
+                        if (file.CompSize[0] == 0 && file.DecompSize[0] == 0)
+                            continue;
                         FileCount++;
                         writer.Write(file.FileNameHash);
                         writer.Write(file.PathHash);
@@ -1089,6 +1127,8 @@ namespace CrossArc
                         byte[] data = reader.ReadBytes((int)file.CompSize[0]);
                         writer.Write(CRC32.Crc32C(data));
                     }
+                    writer.BaseStream.Position = 4;
+                    writer.Write(FileCount);
                 }
             }
             

@@ -74,8 +74,8 @@ namespace CrossArc
             //ARC.HashCheck();
 
             //HashDict.Init();
-            //ARC.CompareHashes("ARCV1Hashes.bin", "ARCV1_1Hashes.bin");
-
+            //ARC.CompareHashes("ARCV1_1Hashes.bin", "ARCV2_0Hashes.bin");
+            //return;
             if (!Extract)
             {
                 Application.EnableVisualStyles();
@@ -91,7 +91,7 @@ namespace CrossArc
                 ARC.Open();
                 timer.Stop();
                 Debug.WriteLine("Initiating Arc: " + timer.ElapsedMilliseconds);
-                //ARC.CreateHashCompare("ARCV1_1Hashes.bin");
+                //ARC.CreateHashCompare("ARCV2_0Hashes.bin");
                 Application.Run(new Form1());
             }
             else
