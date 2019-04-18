@@ -352,7 +352,7 @@ namespace CrossArc
         {
             foreach(TreeNode tn in Nodes)
             {
-                if (tn.Text.Equals(name))
+                if (tn.Text.Equals(name) && tn is FolderNode)
                     return tn;
             }
             return null;

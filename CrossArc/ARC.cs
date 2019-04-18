@@ -178,6 +178,15 @@ namespace CrossArc
             }
 
 
+            /// hacky hacky paddy wacky
+            if (Header.NodeSectionOffset == 0x0375D6E118)
+            {
+                //MessageBox.Show("Opening Arc Version 3");
+                ArcVersion = 3;
+                ReadV2Arc(DecompTableData);
+                //MessageBox.Show("Done");
+            }
+            else
             if (Header.FileSectionOffset >= 0x8824AF68)
             {
                 ArcVersion = 2;
@@ -355,7 +364,6 @@ namespace CrossArc
             }
         }
 
-
         private static void ReadV2Arc(byte[] TableData)
         {
             using (BinaryReader R = new BinaryReader(new MemoryStream(TableData)))
@@ -364,7 +372,10 @@ namespace CrossArc
                 _sNodeHeaderv2 NodeHeader = ByteToType<_sNodeHeaderv2>(R);
                 //PrintStruct<_sNodeHeader>(NodeHeader);
 
-                R.BaseStream.Seek(0x3C, SeekOrigin.Begin);
+                if(ArcVersion == 3)
+                    R.BaseStream.Seek(0x58, SeekOrigin.Begin);
+                else
+                    R.BaseStream.Seek(0x3C, SeekOrigin.Begin);
 
                 // Unknown?? maybe something with languages
                 R.BaseStream.Seek(0xE * 12, SeekOrigin.Current);
@@ -515,6 +526,9 @@ namespace CrossArc
         public static List<FileOffsetGroup> GetFiles()
         {
             Console.WriteLine("Version " + ArcVersion + " " + (ArcVersion == 2));
+            if (ArcVersion == 3)
+                return GetFilesV2();
+            else
             if (ArcVersion == 2)
                 return GetFilesV2();
             else
@@ -694,7 +708,7 @@ namespace CrossArc
             bool External = (flag & 0x08) == 0x08;
             int ExternalOffset = (int)FileOffset.Flags & 0xFFFFFF;
 
-            if((ArcVersion == 2))
+            if((ArcVersion >= 2))
             {
                 // why did they do this
                 flag = ((int)FileOffset.Flags & 0xFF);
@@ -705,7 +719,7 @@ namespace CrossArc
 
             if (ExternalOffset > 0 && !External)
             {
-                if (ArcVersion == 2)
+                if (ArcVersion >= 2)
                 {
                     return GetFileInformation(FileInformationV2[ExternalOffset]);
                 }

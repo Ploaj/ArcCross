@@ -88,7 +88,15 @@ namespace CrossArc
                 Debug.WriteLine("Initiating Hash Dict: " + timer.ElapsedMilliseconds);
                 timer.Reset();
                 timer.Start();
-                ARC.Open();
+                try
+                {
+                    ARC.Open();
+                }
+                catch (Exception e)
+                {
+                    MessageBox.Show("Error Opening Arc", e.ToString());
+                    Application.Exit();
+                }
                 timer.Stop();
                 Debug.WriteLine("Initiating Arc: " + timer.ElapsedMilliseconds);
                 //ARC.CreateHashCompare("ARCV2_0Hashes.bin");
