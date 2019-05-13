@@ -7,7 +7,6 @@ using Zstandard.Net;
 using System.Runtime.InteropServices;
 using System.IO.Compression;
 using System.Windows.Forms;
-using System.Linq;
 
 namespace CrossArc
 {
