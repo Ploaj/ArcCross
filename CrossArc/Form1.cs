@@ -152,9 +152,9 @@ namespace CrossArc
 
                     TotalSize += fNode.DecompSize;
 
-                    if (!Folder.SubNodes.ContainsKey(fNode.Text))
-                        Folder.SubNodes.Add(fNode.Text, new List<TreeNode>());
-                    Folder.SubNodes[fNode.Text].Add(fNode);
+                    if (!Folder.NodesByName.ContainsKey(fNode.Text))
+                        Folder.NodesByName.Add(fNode.Text, new List<TreeNode>());
+                    Folder.NodesByName[fNode.Text].Add(fNode);
                 }
             }
 
@@ -165,9 +165,9 @@ namespace CrossArc
 
                 FileNode fNode = CreateFileNodeFromStreamFile(g, FPath);
 
-                if (!Folder.SubNodes.ContainsKey(fNode.Text))
-                    Folder.SubNodes.Add(fNode.Text, new List<TreeNode>());
-                Folder.SubNodes[fNode.Text].Add(fNode);
+                if (!Folder.NodesByName.ContainsKey(fNode.Text))
+                    Folder.NodesByName.Add(fNode.Text, new List<TreeNode>());
+                Folder.NodesByName[fNode.Text].Add(fNode);
             }
 
             timer.Stop();
@@ -267,7 +267,7 @@ namespace CrossArc
             {
                 var FolderNode = folderNodes.Dequeue();
 
-                foreach (var pair in FolderNode.SubNodes)
+                foreach (var pair in FolderNode.NodesByName)
                 {
                     foreach (var node in pair.Value)
                     {
@@ -288,7 +288,7 @@ namespace CrossArc
         public void MKDir(string path)
         {
             string[] levels = path.Split('/');
-            var subnodes = Root.SubNodes;
+            var subnodes = Root.NodesByName;
             for (int i = 0; i < levels.Length; i++)
             {
                 if (levels[i].Equals(""))
@@ -299,19 +299,20 @@ namespace CrossArc
                     folder = new FolderNode(levels[i]);
                     subnodes[folder.Text].Add(folder);
                 }
-                subnodes = folder.SubNodes;
+                subnodes = folder.NodesByName;
             }
         }
 
         public TreeNode GetFolderFromPath(string path, FolderNode root)
         {
             string[] levels = path.Split('/');
-            var subnodes = root.SubNodes;
+            var subnodes = root.NodesByName;
 
             FolderNode folderNode = null;
             for (int i = 0; i < levels.Length; i++)
             {
-                if (levels[i].Equals("")) continue;
+                if (levels[i].Equals(""))
+                    continue;
                 folderNode = (FolderNode)FindFolder(levels[i], subnodes);
                 if (folderNode == null)
                 {
@@ -321,7 +322,7 @@ namespace CrossArc
                     subnodes[newFolder.Text].Add(newFolder);
                     folderNode = newFolder;
                 }
-                subnodes = folderNode.SubNodes;
+                subnodes = folderNode.NodesByName;
             }
 
             if (folderNode == null)
@@ -332,7 +333,8 @@ namespace CrossArc
 
         public TreeNode FindFolder(string name, Dictionary<string, List<TreeNode>> nodes)
         {
-            // TODO: What happens with duplicate names?
+            // Ignore any duplicate names.
+            // This gets called a lot, so we'll take advantage of the dictionary lookup speed.
             if (nodes.TryGetValue(name, out List<TreeNode> values) && values[0] is FolderNode)
                 return values[0];
             else

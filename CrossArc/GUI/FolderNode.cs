@@ -13,11 +13,12 @@ namespace CrossArc.GUI
 
     public class FolderNode : TreeNode
     {
-        public Dictionary<string, List<TreeNode>> SubNodes = new Dictionary<string, List<TreeNode>>();
+        // Some files may have the same name, so we need to store a list of nodes.
+        public Dictionary<string, List<TreeNode>> NodesByName { get; } = new Dictionary<string, List<TreeNode>>();
 
         public FolderNode(string text)
         {
-            this.Text = text;
+            Text = text;
             ContextMenu = Form1.NodeContextMenu;
             AfterCollapse();
         }
@@ -28,7 +29,7 @@ namespace CrossArc.GUI
             if (IsExpanded) return;
             Nodes.Clear();
             var sortedNodes = new List<TreeNode>();
-            foreach (var pair in SubNodes)
+            foreach (var pair in NodesByName)
             {
                 sortedNodes.AddRange(pair.Value.ToArray());
             }
@@ -46,7 +47,7 @@ namespace CrossArc.GUI
             Queue<TreeNode> NodeList = new Queue<TreeNode>();
             List<ArcExtractInformation> info = new List<ArcExtractInformation>();
 
-            foreach (var pair in SubNodes)
+            foreach (var pair in NodesByName)
             {
                 foreach (TreeNode n in pair.Value)
                 {
@@ -63,7 +64,7 @@ namespace CrossArc.GUI
                 }
                 else
                 {
-                    foreach (var pair in ((FolderNode)n).SubNodes)
+                    foreach (var pair in ((FolderNode)n).NodesByName)
                     {
                         foreach (TreeNode child in pair.Value)
                         {
