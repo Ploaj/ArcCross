@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
 
@@ -16,11 +13,12 @@ namespace CrossArc.GUI
 
     public class FolderNode : TreeNode
     {
-        public List<TreeNode> SubNodes = new List<TreeNode>();
+        // Some files may have the same name, so we need to store a list of nodes.
+        public Dictionary<string, List<TreeNode>> NodesByName { get; } = new Dictionary<string, List<TreeNode>>();
 
         public FolderNode(string text)
         {
-            this.Text = text;
+            Text = text;
             ContextMenu = Form1.NodeContextMenu;
             AfterCollapse();
         }
@@ -30,7 +28,12 @@ namespace CrossArc.GUI
         {
             if (IsExpanded) return;
             Nodes.Clear();
-            Nodes.AddRange(SubNodes.OrderBy(f => f.Text).ToArray());
+            var sortedNodes = new List<TreeNode>();
+            foreach (var pair in NodesByName)
+            {
+                sortedNodes.AddRange(pair.Value.ToArray());
+            }
+            Nodes.AddRange(sortedNodes.OrderBy(f => f.Text).ToArray());
         }
 
         public void AfterCollapse()
@@ -43,24 +46,32 @@ namespace CrossArc.GUI
         {
             Queue<TreeNode> NodeList = new Queue<TreeNode>();
             List<ArcExtractInformation> info = new List<ArcExtractInformation>();
-            //Expand();
-            foreach (TreeNode n in SubNodes)
+
+            foreach (var pair in NodesByName)
             {
-                //n.Expand();
-                NodeList.Enqueue(n);
+                foreach (TreeNode n in pair.Value)
+                {
+                    NodeList.Enqueue(n);
+                }
             }
+
             while (NodeList.Count > 0)
             {
                 TreeNode n = NodeList.Dequeue();
-                //n.Expand();
                 if (n is FileNode fileNode)
                 {
                     info.AddRange(fileNode.GetExtractInformation(fileNode.FullFilePath, compressed));
                 }
                 else
                 {
-                    foreach (TreeNode child in ((FolderNode)n).SubNodes)
-                        NodeList.Enqueue(child);
+                    foreach (var pair in ((FolderNode)n).NodesByName)
+                    {
+                        foreach (TreeNode child in pair.Value)
+                        {
+                            NodeList.Enqueue(child);
+                        }
+                    }
+
                 }
             }
             return info.ToArray();

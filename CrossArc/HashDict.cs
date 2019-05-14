@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CrossArc
 {
     public class HashDict
     {
-        public static Dictionary<uint, string> Hashes = new Dictionary<uint, string>();
+        // Predict the size to avoid resizing the dictionary.
+        public static Dictionary<uint, string> Hashes = new Dictionary<uint, string>(630000);
 
         public static bool TryGetValue(uint key, out string name)
         {
@@ -18,18 +15,11 @@ namespace CrossArc
 
         public static void Init()
         {
-            string[] strings = File.ReadAllLines("Hashes.txt");
-
-            //StreamWriter w = new StreamWriter(new FileStream("newstrings.txt", FileMode.Create));
-            foreach (string s in strings)
+            foreach (string s in File.ReadLines("Hashes.txt"))
             {
-                //if (s.Contains("/")) continue;
-                //w.WriteLine(s);
                 uint crc = CRC32.Crc32C(s);
-                if (!Hashes.ContainsKey(crc))
-                    Hashes.Add(crc, s);
+                Hashes[crc] = s;
             }
-            //w.Close();
         }
     }
 }
