@@ -1,31 +1,34 @@
-﻿using System;
+﻿using CrossArc.Structs;
+using System;
 using System.Collections.Generic;
-using CrossArc.Structs;
-using System.IO;
 using System.Diagnostics;
-using Zstandard.Net;
-using System.Runtime.InteropServices;
+using System.IO;
 using System.IO.Compression;
-using System.Windows.Forms;
+using System.Runtime.InteropServices;
+using Zstandard.Net;
 
 namespace CrossArc
 {
-    public struct FileOffsetGroup
+    public class FileOffsetGroup
     {
-        public long[] ArcOffset;
-        public long[] Offset;
-        public long[] CompSize;
-        public long[] DecompSize;
-        public uint[] Flags;
+        public long[] ArcOffset = new long[0xE];
+        public long[] Offset = new long[0xE];
+        public long[] CompSize = new long[0xE];
+        public long[] DecompSize = new long[0xE];
+        public uint[] Flags = new uint[0xE];
         public string Path;
         public string FileName;
         public uint FileNameHash;
         public uint PathHash;
         public long SubFileInformationOffset;
+        public bool IsRegional;
     }
 
     public class ARC
     {
+        public static readonly Dictionary<uint, string> MissingHashes = new Dictionary<uint, string>();
+        public static readonly Dictionary<uint, string> UsedHashes = new Dictionary<uint, string>();
+
         public string FilePath { get; }
 
         private int arcVersion = 1;
@@ -52,7 +55,7 @@ namespace CrossArc
         private _sFileInformationSubIndex[] fileInformationSubIndex;
 
         // for speed
-        private Dictionary<uint, _sDirectoryList> folderHashDict;
+        private Dictionary<uint, _sDirectoryList> folderHashDict = new Dictionary<uint, _sDirectoryList>();
         private Dictionary<int, _sDirectoryOffsets> chunkHash1 = new Dictionary<int, _sDirectoryOffsets>();
         private Dictionary<int, _sDirectoryOffsets> chunkHash2 = new Dictionary<int, _sDirectoryOffsets>();
 
@@ -180,23 +183,25 @@ namespace CrossArc
 
                 reader.BaseStream.Position += 8 * nodeHeader.FileInformationCount;
 
-                folderHashDict = new Dictionary<uint, _sDirectoryList>();
+                // data.arc files will all have similar file counts, so the capacities can be estimated.
+                folderHashDict = new Dictionary<uint, _sDirectoryList>(25838);
                 foreach (_sDirectoryList fh in directoryLists)
                 {
                     folderHashDict.Add(fh.HashID, fh);
                 }
 
+                chunkHash1 = new Dictionary<int, _sDirectoryOffsets>(479864);
                 foreach (_sDirectoryOffsets chunk in directoryOffsets1)
                 {
                     for (int i = 0; i < chunk.SubDataCount; i++)
-                        if (!chunkHash1.ContainsKey((int)chunk.SubDataStartIndex + i))
-                            chunkHash1.Add((int)chunk.SubDataStartIndex + i, chunk);
+                        chunkHash1[(int)chunk.SubDataStartIndex + i] = chunk;
                 }
+
+                chunkHash2 = new Dictionary<int, _sDirectoryOffsets>(14912);
                 foreach (_sDirectoryOffsets chunk in directoryOffsets2)
                 {
                     for (int i = 0; i < chunk.SubDataCount; i++)
-                        if (!chunkHash2.ContainsKey((int)chunk.SubDataStartIndex + i))
-                            chunkHash2.Add((int)chunk.SubDataStartIndex + i, chunk);
+                        chunkHash2[(int)chunk.SubDataStartIndex + i] = chunk;
                 }
             }
         }
@@ -287,27 +292,28 @@ namespace CrossArc
                 }
                 Console.WriteLine($"Directory index {max.ToString("X")} {directoryLists.Length.ToString("X")} {(directoryOffsets1.Length + directoryOffsets2.Length).ToString("X")}");
 
-
-                folderHashDict = new Dictionary<uint, _sDirectoryList>();
+                // data.arc files will all have similar file counts, so the capacities can be estimated.
+                folderHashDict = new Dictionary<uint, _sDirectoryList>(28664);
                 foreach (_sDirectoryList fh in directoryLists)
                 {
                     folderHashDict.Add(fh.HashID, fh);
                 }
 
+                chunkHash1 = new Dictionary<int, _sDirectoryOffsets>(226756);
                 foreach (_sDirectoryOffsets chunk in directoryOffsets1)
                 {
                     for (int i = 0; i < chunk.SubDataCount; i++)
                     {
-                        if (!chunkHash1.ContainsKey((int)chunk.SubDataStartIndex + i))
-                            chunkHash1.Add((int)chunk.SubDataStartIndex + i, chunk);
+                        chunkHash1[(int)chunk.SubDataStartIndex + i] = chunk;
                     }
                 }
+
+                chunkHash2 = new Dictionary<int, _sDirectoryOffsets>(15614);
                 foreach (_sDirectoryOffsets chunk in directoryOffsets2)
                 {
                     for (int i = 0; i < chunk.SubDataCount; i++)
                     {
-                        if (!chunkHash2.ContainsKey((int)chunk.SubDataStartIndex + i))
-                            chunkHash2.Add((int)chunk.SubDataStartIndex + i, chunk);
+                        chunkHash2[(int)chunk.SubDataStartIndex + i] = chunk;
                     }
                 }
             }
@@ -315,45 +321,41 @@ namespace CrossArc
 
         public List<FileOffsetGroup> GetStreamFiles()
         {
-            var streamfiles = new List<FileOffsetGroup>(streamNameToHash.Length);
+            var streamFiles = new List<FileOffsetGroup>(streamNameToHash.Length);
 
-            foreach (var streamfile in streamNameToHash)
+            foreach (var streamFile in streamNameToHash)
             {
                 FileOffsetGroup group = new FileOffsetGroup();
-                group.FileName = GetName(streamfile.Hash);
+                group.FileName = GetName(streamFile.Hash);
 
-                if (streamfile.Flags == 1 || streamfile.Flags == 2)
+                if (streamFile.Flags == 1 || streamFile.Flags == 2)
                 {
                     int size = 0xE;
-                    group.ArcOffset = new long[size];
-                    group.CompSize = new long[size];
-                    group.DecompSize = new long[size];
-                    group.Flags = new uint[size];
-                    if (streamfile.Flags == 2)
+                    if (streamFile.Flags == 2)
                         size = 0x5;
                     for (int i = 0; i < size; i++)
                     {
-                        var streamindex = streamIndexToFile[(streamfile.NameIndex >> 8) + i].FileIndex;
-                        var offset = streamOffsets[streamindex];
+                        var streamIndex = streamIndexToFile[(streamFile.NameIndex >> 8) + i].FileIndex;
+                        var offset = streamOffsets[streamIndex];
                         group.ArcOffset[i] = offset.Offset;
                         group.CompSize[i] = offset.Size;
                         group.DecompSize[i] = offset.Size;
-                        group.Flags[i] = streamfile.Flags;
+                        group.Flags[i] = streamFile.Flags;
                     }
                 }
                 else
                 {
-                    var streamindex = streamIndexToFile[streamfile.NameIndex >> 8].FileIndex;
-                    var offset = streamOffsets[streamindex];
-                    group.ArcOffset = new long[] { offset.Offset };
-                    group.CompSize = new long[] { offset.Size };
-                    group.DecompSize = new long[] { offset.Size };
-                    group.Flags = new uint[] { streamfile.Flags };
+                    var streamIndex = streamIndexToFile[streamFile.NameIndex >> 8].FileIndex;
+                    var offset = streamOffsets[streamIndex];
+                    group.ArcOffset[0] = offset.Offset;
+                    group.CompSize[0] = offset.Size;
+                    group.DecompSize[0] = offset.Size;
+                    group.Flags[0] = streamFile.Flags;
                 }
 
-                streamfiles.Add(group);
+                streamFiles.Add(group);
             }
-            return streamfiles;
+            return streamFiles;
         }
 
 
@@ -374,13 +376,15 @@ namespace CrossArc
             foreach (var item in fileInformation)
             {
                 var directory = directoryLists[item.DirectoryIndex >> 8];
-                var offsetGroup = GetFileInformation(item);
+                var offsetGroup = GetFileInformation(item, 0);
                 if ((item.FileTableFlag >> 8) > 0)
                 {
+                    offsetGroup.IsRegional = true;
+
                     for (int i = 1; i < 0xE; i++)
                     {
-                        var offsetGroup2 = GetFileInformation(item, i);
-                        offsetGroup = ResizeOffsetGroupArrays(offsetGroup, offsetGroup2, i);
+                        var regionalOffsetGroup = GetFileInformation(item, i);
+                        UpdateOffsetGroupArrays(offsetGroup, regionalOffsetGroup, i);
                     }
                 }
 
@@ -419,13 +423,15 @@ namespace CrossArc
 
         private FileOffsetGroup CreateFileOffsetGroup(_sFileInformationV2 item)
         {
-            var offsetGroup = GetFileInformation(item);
+            var offsetGroup = GetFileInformation(item, 0);
             if ((item.Flags & 0xF000) == 0x8000)
             {
+                offsetGroup.IsRegional = true;
+
                 for (int i = 1; i < 0xE; i++)
                 {
-                    var offsetGroup2 = GetFileInformation(item, i);
-                    offsetGroup = ResizeOffsetGroupArrays(offsetGroup, offsetGroup2, i);
+                    var regionalOffsetGroup = GetFileInformation(item, i);
+                    UpdateOffsetGroupArrays(offsetGroup, regionalOffsetGroup, i);
                 }
             }
 
@@ -448,31 +454,21 @@ namespace CrossArc
             return extension;
         }
 
-        private static FileOffsetGroup ResizeOffsetGroupArrays(FileOffsetGroup offsetGroup, FileOffsetGroup offsetGroup2, int i)
+        private static void UpdateOffsetGroupArrays(FileOffsetGroup target, FileOffsetGroup source, int index)
         {
-            Array.Resize(ref offsetGroup.ArcOffset, offsetGroup.ArcOffset.Length + 1);
-            offsetGroup.ArcOffset[offsetGroup.ArcOffset.Length - 1] = offsetGroup2.ArcOffset[0];
-
-            Array.Resize(ref offsetGroup.Offset, offsetGroup.Offset.Length + 1);
-            offsetGroup.Offset[offsetGroup.Offset.Length - 1] = offsetGroup2.Offset[0];
-
-            Array.Resize(ref offsetGroup.CompSize, offsetGroup.CompSize.Length + 1);
-            offsetGroup.CompSize[offsetGroup.CompSize.Length - 1] = offsetGroup2.CompSize[0];
-
-            Array.Resize(ref offsetGroup.DecompSize, offsetGroup.DecompSize.Length + 1);
-            offsetGroup.DecompSize[offsetGroup.DecompSize.Length - 1] = offsetGroup2.DecompSize[0];
-
-            Array.Resize(ref offsetGroup.Flags, offsetGroup.Flags.Length + 1);
-            offsetGroup.Flags[offsetGroup.Flags.Length - 1] = offsetGroup2.Flags[0];
-            return offsetGroup;
+            target.ArcOffset[index] = source.ArcOffset[0];
+            target.Offset[index] = source.Offset[0];
+            target.CompSize[index] = source.CompSize[0];
+            target.DecompSize[index] = source.DecompSize[0];
+            target.Flags[index] = source.Flags[0];
         }
 
-        private FileOffsetGroup GetFileInformation(_sFileInformation fileInfo, int regionalIndex = 0)
+        private FileOffsetGroup GetFileInformation(_sFileInformation fileInfo, int regionalIndex)
         {
             return GetFileInformation(fileInfo.SubFile_Index, (fileInfo.FileTableFlag >> 8), directoryLists[fileInfo.DirectoryIndex >> 8].DirOffsetIndex >> 8, regionalIndex);
         }
 
-        private FileOffsetGroup GetFileInformation(_sFileInformationV2 fileInfo, int regionalIndex = 0)
+        private FileOffsetGroup GetFileInformation(_sFileInformationV2 fileInfo, int regionalIndex)
         {
             bool regional = fileInfo.Flags == 0x8010;
             var path = fileInformationPath[fileInfo.HashIndex];
@@ -539,11 +535,11 @@ namespace CrossArc
             {
                 if (arcVersion >= 2)
                 {
-                    return GetFileInformation(fileInformationV2[externalOffset]);
+                    return GetFileInformation(fileInformationV2[externalOffset], 0);
                 }
                 else
                 {
-                    return GetFileInformation(fileInformation[externalOffset]);
+                    return GetFileInformation(fileInformation[externalOffset], 0);
                 }
             }
 
@@ -553,20 +549,20 @@ namespace CrossArc
                 directoryOffset2 = chunkHash2[externalOffset];
                 fileOffset = subFileInformation2[externalOffset];
 
-                g.ArcOffset = new long[] { (header.FileSectionOffset + directoryOffset2.Offset + (fileOffset.Offset << 2)) };
-                g.Offset = new long[] { fileOffset.Offset };
-                g.CompSize = new long[] { fileOffset.CompSize };
-                g.DecompSize = new long[] { fileOffset.DecompSize };
-                g.Flags = new uint[] { fileOffset.Flags };
+                g.ArcOffset[0] = header.FileSectionOffset + directoryOffset2.Offset + (fileOffset.Offset << 2);
+                g.Offset[0] = fileOffset.Offset;
+                g.CompSize[0] = fileOffset.CompSize;
+                g.DecompSize[0] = fileOffset.DecompSize;
+                g.Flags[0] = fileOffset.Flags;
                 g.SubFileInformationOffset = subFileInformationStart2 + externalOffset * 16;
             }
             else
             {
-                g.ArcOffset = new long[] { (header.FileSectionOffset + directoryOffset.Offset + (fileOffset.Offset << 2)) };
-                g.Offset = new long[] { fileOffset.Offset };
-                g.CompSize = new long[] { fileOffset.CompSize };
-                g.DecompSize = new long[] { fileOffset.DecompSize };
-                g.Flags = new uint[] { fileOffset.Flags };
+                g.ArcOffset[0] = header.FileSectionOffset + directoryOffset.Offset + (fileOffset.Offset << 2);
+                g.Offset[0] = fileOffset.Offset;
+                g.CompSize[0] = fileOffset.CompSize;
+                g.DecompSize[0] = fileOffset.DecompSize;
+                g.Flags[0] = fileOffset.Flags;
                 g.SubFileInformationOffset = subFileInformationStart + subFileIndex * 16;
             }
 
@@ -794,9 +790,6 @@ namespace CrossArc
             return folder1 + folder2 + folder3;
         }
 
-        // TODO: Move this method
-        public static Dictionary<uint, string> MissingHashes = new Dictionary<uint, string>();
-        public static Dictionary<uint, string> UsedHashes = new Dictionary<uint, string>();
         public static string GetName(uint hash, string extension = "")
         {
             string name = "";

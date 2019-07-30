@@ -217,7 +217,7 @@ namespace CrossArc
                 FullFilePath = filePath
             };
 
-            if ((fileOffsetGroup.ArcOffset.Length > 1))
+            if ((fileOffsetGroup.IsRegional))
             {
                 fNode.IsRegional = true;
                 fNode._rArcOffset = fileOffsetGroup.ArcOffset;
@@ -241,9 +241,8 @@ namespace CrossArc
                 FullFilePath = fileOffsetGroup.Path + fileOffsetGroup.FileName
             };
 
-            if ((fileOffsetGroup.ArcOffset.Length > 1))
+            if ((fileOffsetGroup.IsRegional))
             {
-
                 fNode.IsRegional = true;
                 fNode._rArcOffset = fileOffsetGroup.ArcOffset;
                 fNode._rCompSize = fileOffsetGroup.CompSize;
