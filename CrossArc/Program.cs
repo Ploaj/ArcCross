@@ -14,8 +14,6 @@ namespace CrossArc
             string ArcOffset = "data.arc";
             string FolderToExtract = "";
 
-            //args = new string[] { "-x", "data.arc" };//, "stage/BossStage_Dracula/normal/model/bs_dc_floor_shadow_set" };
-
             if (args.Length == 0)
             {
                 Console.WriteLine(
@@ -52,21 +50,6 @@ namespace CrossArc
             }
             Debug.WriteLine(FolderToExtract);
 
-            /*var list1 = new List<string>();
-            list1.AddRange(File.ReadAllLines("moosestrings.txt"));
-            list1.Union(File.ReadAllLines("Hashes.txt"));
-            list1.Sort();
-            using (StreamWriter w = new StreamWriter(new FileStream("out.txt", FileMode.Create)))
-            {
-                foreach(string s in list1)
-                w.WriteLine(s);
-            }*/
-
-            //ARC.HashCheck();
-
-            //HashDict.Init();
-            //ARC.CompareHashes("ARCV1_1Hashes.bin", "ARCV2_0Hashes.bin");
-            //return;
             if (!Extract)
             {
                 Application.EnableVisualStyles();
@@ -88,9 +71,6 @@ namespace CrossArc
                     MessageBox.Show("Error Opening Arc", e.ToString());
                     Application.Exit();
                 }
-                timer.Stop();
-                Debug.WriteLine("Initiating Arc: " + timer.ElapsedMilliseconds);
-                //ARC.CreateHashCompare("ARCV2_0Hashes.bin");
                 Application.Run(new Form1());
             }
             else
@@ -98,9 +78,6 @@ namespace CrossArc
                 //ARC.CommandFunctions(FolderToExtract);
             }
             
-            //Console.WriteLine("Done");
-            //Console.WriteLine("Press enter to close");
-            //Console.ReadLine();
         }
 
 

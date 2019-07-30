@@ -71,6 +71,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ARC.cs" />
+    <Compile Include="ArcArrayReading.cs" />
     <Compile Include="CRC32.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>

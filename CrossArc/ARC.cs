@@ -70,7 +70,7 @@ namespace CrossArc
                     d.FileName = "data.arc";
                     d.Filter = "Smash Ultimate ARC (*.arc)|*.arc";
 
-                    if(d.ShowDialog() == DialogResult.OK)
+                    if (d.ShowDialog() == DialogResult.OK)
                     {
                         FilePath = d.FileName;
                     }
@@ -80,6 +80,8 @@ namespace CrossArc
                     }
                 }
             }
+
+            Stopwatch stopwatch = Stopwatch.StartNew();
 
             MemoryStream DecompTables = new MemoryStream();
             byte[] DecompTableData;
@@ -105,7 +107,7 @@ namespace CrossArc
                     }
                 }
                 DecompTableData = DecompTables.ToArray();
-                if(DecompTableData.Length == 0)
+                if (DecompTableData.Length == 0)
                 {
                     R.BaseStream.Seek(Header.NodeSectionOffset, SeekOrigin.Begin);
                     DecompTableData = (R.ReadBytes((int)(R.BaseStream.Length - R.BaseStream.Position)));
@@ -127,6 +129,9 @@ namespace CrossArc
             }
             else
                 ReadV1Arc(DecompTableData);
+
+            stopwatch.Stop();
+            Debug.WriteLine($"Initiating Arc: {stopwatch.ElapsedMilliseconds}");
         }
 
 
@@ -138,18 +143,18 @@ namespace CrossArc
                 _sNodeHeader NodeHeader = ByteToType<_sNodeHeader>(R);
 
                 R.BaseStream.Seek(0x68, SeekOrigin.Begin);
-                
+
                 // Hash Table
                 R.BaseStream.Seek(0x8 * NodeHeader.Part1Count, SeekOrigin.Current);
 
                 // Hash Table 2
-                StreamNameToHash = ReadArray<_sStreamNameToHash>(R, NodeHeader.Part1Count);
+                StreamNameToHash = ArcArrayReading.ReadSStreamNamesToHashes(R, NodeHeader.Part1Count);
 
                 // Hash Table 3
-                StreamIndexToFile = ReadArray<_sStreamIndexToFile>(R, NodeHeader.Part2Count);
+                StreamIndexToFile = ArcArrayReading.ReadSStreamIndicesToFiles(R, NodeHeader.Part2Count);
 
                 // stream offsets
-                StreamOffsets = ReadArray<_sStreamOffset>(R, NodeHeader.MusicFileCount);
+                StreamOffsets = ArcArrayReading.ReadSStreamOffsets(R, NodeHeader.MusicFileCount);
 
                 // Another Hash Table
                 Debug.WriteLine("RegionalHashList " + R.BaseStream.Position.ToString("X"));
@@ -158,27 +163,27 @@ namespace CrossArc
                 //folders
 
                 Debug.WriteLine("FodlerHashes " + R.BaseStream.Position.ToString("X"));
-                DirectoryLists = ReadArray<_sDirectoryList>(R, NodeHeader.FolderCount);
+                DirectoryLists = ArcArrayReading.ReadSDirectoryLists(R, NodeHeader.FolderCount);
 
                 //file offsets
 
                 Debug.WriteLine("fileoffsets " + R.BaseStream.Position.ToString("X"));
-                DirectoryOffsets_1 = ReadArray<_sDirectoryOffsets>(R, NodeHeader.FileCount1);
-                DirectoryOffsets_2 = ReadArray<_sDirectoryOffsets>(R, NodeHeader.FileCount2);
+                DirectoryOffsets_1 = ArcArrayReading.ReadDirectoryOffsets(R, NodeHeader.FileCount1);
+                DirectoryOffsets_2 = ArcArrayReading.ReadDirectoryOffsets(R, NodeHeader.FileCount2);
 
                 Debug.WriteLine("subfileoffset " + R.BaseStream.Position.ToString("X"));
-                HashFolderCounts = ReadArray<_sFolderHashIndex>(R, NodeHeader.HashFolderCount);
+                HashFolderCounts = ArcArrayReading.ReadSFolderHashIndices(R, NodeHeader.HashFolderCount);
 
                 Debug.WriteLine("subfileoffset " + R.BaseStream.Position.ToString("X"));
                 FileInformation = ReadArray<_sFileInformation>(R, NodeHeader.FileInformationCount);
 
                 Debug.WriteLine("subfileoffset " + R.BaseStream.Position.ToString("X"));
                 SubFileInformationStart = R.BaseStream.Position;
-                SubFileInformation_1 = ReadArray<_SubFileInfo>(R, NodeHeader.SubFileCount);
+                SubFileInformation_1 = ArcArrayReading.ReadSubFileInfos(R, NodeHeader.SubFileCount);
                 SubFileInformationStart2 = R.BaseStream.Position;
-                SubFileInformation_2 = ReadArray<_SubFileInfo>(R, NodeHeader.SubFileCount2);
+                SubFileInformation_2 = ArcArrayReading.ReadSubFileInfos(R, NodeHeader.SubFileCount2);
 
-                _sHashInt[] HashInts = ReadArray<_sHashInt>(R, NodeHeader.FolderCount);
+                _sHashInt[] HashInts = ArcArrayReading.ReadHashInts(R, NodeHeader.FolderCount);
 
                 // okay some more file information
                 uint FileHashCount = R.ReadUInt32();
@@ -218,7 +223,7 @@ namespace CrossArc
                 _sNodeHeaderv2 NodeHeader = ByteToType<_sNodeHeaderv2>(R);
                 //PrintStruct<_sNodeHeader>(NodeHeader);
 
-                if(ArcVersion == 3)
+                if (ArcVersion == 3)
                     R.BaseStream.Seek(0x58, SeekOrigin.Begin);
                 else
                     R.BaseStream.Seek(0x3C, SeekOrigin.Begin);
@@ -235,15 +240,15 @@ namespace CrossArc
 
                 // Hash Table 2
                 Console.WriteLine("StreamToHash table 2 " + R.BaseStream.Position.ToString("X"));
-                StreamNameToHash = ReadArray<_sStreamNameToHash>(R, NodeHeader2.Part1Count);
+                StreamNameToHash = ArcArrayReading.ReadSStreamNamesToHashes(R, NodeHeader2.Part1Count);
 
                 // Hash Table 3
                 Console.WriteLine("Hash table 3 " + R.BaseStream.Position.ToString("X"));
-                StreamIndexToFile = ReadArray<_sStreamIndexToFile>(R, NodeHeader2.Part2Count);
+                StreamIndexToFile = ArcArrayReading.ReadSStreamIndicesToFiles(R, NodeHeader2.Part2Count);
 
                 // stream offsets
                 Console.WriteLine("Hash table 4 " + R.BaseStream.Position.ToString("X"));
-                StreamOffsets = ReadArray<_sStreamOffset>(R, NodeHeader2.Part3Size);
+                StreamOffsets = ArcArrayReading.ReadSStreamOffsets(R, NodeHeader2.Part3Size);
 
                 Console.WriteLine("Hash table 5 " + R.BaseStream.Position.ToString("X"));
                 int UnkCount1 = R.ReadInt32();
@@ -252,11 +257,11 @@ namespace CrossArc
                 R.BaseStream.Seek(0x8 * UnkCount1, SeekOrigin.Current);
 
                 Debug.WriteLine("FilePathInfo " + R.BaseStream.Position.ToString("X"));
-                FileInformationPath = ReadArray<_sFileInformationPath>(R, NodeHeader.UnkCount);
+                FileInformationPath = ArcArrayReading.ReadSFileInformationPaths(R, NodeHeader.UnkCount);
 
                 // Start of first node header section
                 Debug.WriteLine("SomeIndicesForFileInformation " + R.BaseStream.Position.ToString("X"));
-                FileInformationIndex = ReadArray<_sFileInformationIndex>(R, NodeHeader.UnkOffsetSizeCount);
+                FileInformationIndex = ArcArrayReading.ReadSFileInformationIndices(R, NodeHeader.UnkOffsetSizeCount);
 
                 // Start of first node header section
                 Debug.WriteLine("FolderHashes " + R.BaseStream.Position.ToString("X"));
@@ -265,31 +270,32 @@ namespace CrossArc
                 //folders
 
                 Debug.WriteLine("FolderHashes " + R.BaseStream.Position.ToString("X"));
-                DirectoryLists = ReadArray<_sDirectoryList>(R, NodeHeader.FolderCount);
+                DirectoryLists = ArcArrayReading.ReadSDirectoryLists(R, NodeHeader.FolderCount);
 
                 //file offsets
 
                 Debug.WriteLine("fileoffsets " + R.BaseStream.Position.ToString("X"));
-                DirectoryOffsets_1 = ReadArray<_sDirectoryOffsets>(R, NodeHeader.FileCount1);
-                DirectoryOffsets_2 = ReadArray<_sDirectoryOffsets>(R, NodeHeader.FileCount2);
+                DirectoryOffsets_1 = ArcArrayReading.ReadDirectoryOffsets(R, NodeHeader.FileCount1);
+                DirectoryOffsets_2 = ArcArrayReading.ReadDirectoryOffsets(R, NodeHeader.FileCount2);
 
                 Debug.WriteLine("hashfolderoffset " + R.BaseStream.Position.ToString("X"));
-                HashFolderCounts = ReadArray<_sFolderHashIndex>(R, NodeHeader.HashFolderCount);
-                
+                HashFolderCounts = ArcArrayReading.ReadSFolderHashIndices(R, NodeHeader.HashFolderCount);
+
                 Debug.WriteLine("fileinformationoffset " + R.BaseStream.Position.ToString("X"));
-                FileInformationV2 = ReadArray<_sFileInformationV2>(R, NodeHeader.FileInformationCount + NodeHeader.SubFileCount2);
+                FileInformationV2 = ArcArrayReading.ReadSFileInformationV2(R, NodeHeader.FileInformationCount + NodeHeader.SubFileCount2);
 
                 Debug.WriteLine("sub index table " + R.BaseStream.Position.ToString("X"));
-                FileInformationSubIndex = ReadArray<_sFileInformationSubIndex>(R, (NodeHeader.LastTableCount + NodeHeader.SubFileCount2));
+                FileInformationSubIndex = ArcArrayReading.ReadSFileInformationSubIndices(R, NodeHeader.LastTableCount + NodeHeader.SubFileCount2);
 
                 Debug.WriteLine("subfileoffset " + R.BaseStream.Position.ToString("X"));
                 SubFileInformationStart = R.BaseStream.Position;
-                SubFileInformation_1 = ReadArray<_SubFileInfo>(R, NodeHeader.SubFileCount);
+                SubFileInformation_1 = ArcArrayReading.ReadSubFileInfos(R, NodeHeader.SubFileCount);
+
                 SubFileInformationStart2 = R.BaseStream.Position;
-                SubFileInformation_2 = ReadArray<_SubFileInfo>(R, NodeHeader.SubFileCount2);
+                SubFileInformation_2 = ArcArrayReading.ReadSubFileInfos(R, NodeHeader.SubFileCount2);
 
                 int max = 0;
-                foreach(var dir in FileInformationSubIndex)
+                foreach (var dir in FileInformationSubIndex)
                 {
                     max = Math.Max(max, (int)dir.SomeIndex1);
                 }
@@ -317,7 +323,7 @@ namespace CrossArc
                         if (!ChunkHash2.ContainsKey((int)chunk.SubDataStartIndex + i))
                             ChunkHash2.Add((int)chunk.SubDataStartIndex + i, chunk);
                     }
-                }         
+                }
             }
         }
 
@@ -330,7 +336,7 @@ namespace CrossArc
         {
             var streamfiles = new List<FileOffsetGroup>(StreamNameToHash.Length);
 
-            foreach(var streamfile in StreamNameToHash)
+            foreach (var streamfile in StreamNameToHash)
             {
                 FileOffsetGroup group = new FileOffsetGroup();
                 group.FileName = GetName(streamfile.Hash);
@@ -496,13 +502,13 @@ namespace CrossArc
             // Get File Data
 
             _SubFileInfo FileOffset;
-            if(SubFile_Index < SubFileInformation_1.Length)
+            if (SubFile_Index < SubFileInformation_1.Length)
                 FileOffset = SubFileInformation_1[SubFile_Index];
             else
                 FileOffset = SubFileInformation_2[SubFile_Index - SubFileInformation_1.Length];
 
             _sDirectoryOffsets DirectoryOffset;
-            if(DirectoryIndex < DirectoryOffsets_1.Length)
+            if (DirectoryIndex < DirectoryOffsets_1.Length)
                 DirectoryOffset = DirectoryOffsets_1[DirectoryIndex];
             else
                 DirectoryOffset = DirectoryOffsets_2[DirectoryIndex - DirectoryOffsets_1.Length];
@@ -521,11 +527,11 @@ namespace CrossArc
             else
             if ((DirectoryOffset.ResourceIndex & 0xFFFFFF) != 0xFFFFFF)
             {
-                if(DirectoryOffset.ResourceIndex < DirectoryOffsets_1.Length)
+                if (DirectoryOffset.ResourceIndex < DirectoryOffsets_1.Length)
                     DirectoryOffset2 = DirectoryOffsets_1[((DirectoryOffset.ResourceIndex) & 0xFFFFFF)];
                 else
                     DirectoryOffset2 = DirectoryOffsets_2[((DirectoryOffset.ResourceIndex - DirectoryOffsets_1.Length) & 0xFFFFFF)];
-                
+
             }
 
             // Parse Flags
@@ -534,7 +540,7 @@ namespace CrossArc
             bool External = (flag & 0x08) == 0x08;
             int ExternalOffset = (int)FileOffset.Flags & 0xFFFFFF;
 
-            if((ArcVersion >= 2))
+            if ((ArcVersion >= 2))
             {
                 // why did they do this
                 flag = ((int)FileOffset.Flags & 0xFF);
@@ -585,7 +591,7 @@ namespace CrossArc
         {
             List<string> paths = new List<string>();
 
-            foreach(_sFolderHashIndex fhi in HashFolderCounts)
+            foreach (_sFolderHashIndex fhi in HashFolderCounts)
             {
                 paths.Add(GetPathString(FolderHashDict, FolderHashDict[fhi.Hash]));
             }
@@ -829,13 +835,11 @@ namespace CrossArc
             return "0x" + Hash.ToString("X") + Extension;
         }
 
-
-
-        public static T[] ReadArray<T>(BinaryReader reader, uint Size)
+        public static T[] ReadArray<T>(BinaryReader reader, uint size)
         {
             // slow af but whatevs
-            T[] arr = new T[Size];
-            for (int i = 0; i < Size; i++)
+            T[] arr = new T[size];
+            for (int i = 0; i < size; i++)
             {
                 arr[i] = ByteToType<T>(reader);
             }
@@ -871,10 +875,10 @@ namespace CrossArc
                 uint FileCount = reader.ReadUInt32();
                 FileCount = (uint)(reader.BaseStream.Length - 8) / 12;
                 var Hashes = ReadArray<HashCompareCheck>(reader, FileCount);
-                foreach(var f in Hashes)
+                foreach (var f in Hashes)
                 {
                     long key = ((long)f.Name << 32) | f.Path;
-                    if(!PreviousHashes.ContainsKey(key))
+                    if (!PreviousHashes.ContainsKey(key))
                         PreviousHashes.Add(key, f);
                     else
                     {
@@ -933,7 +937,7 @@ namespace CrossArc
                 long key = ((long)c.Name << 32) | c.Path;
                 if (PreviousHashes.ContainsKey(key))
                 {
-                    if(PreviousHashes[key].Hash != c.Hash)
+                    if (PreviousHashes[key].Hash != c.Hash)
                         Changed.Add(Path + Name);
                     PreviousHashes.Remove(key);
                 }
@@ -949,7 +953,7 @@ namespace CrossArc
                 {
                     writer.WriteLine($"Added: {f}");
                 }
-                foreach(var f in Changed)
+                foreach (var f in Changed)
                 {
                     writer.WriteLine($"Changed: {f}");
                 }
@@ -970,7 +974,7 @@ namespace CrossArc
                     int Percent = 0;
                     foreach (var file in Files)
                     {
-                        if(FileCount >= PercentSlice)
+                        if (FileCount >= PercentSlice)
                         {
                             FileCount = 0;
                             Console.WriteLine($"{Percent}% Done");
@@ -989,7 +993,7 @@ namespace CrossArc
                     writer.Write(FileCount);
                 }
             }
-            
+
         }
     }
 }
