@@ -11,7 +11,9 @@ namespace CrossArc.GUI
         public uint DecompSize { get; set; }
         public uint Flags { get; set; }
 
-        public bool IsRegional { get => _isRegional;
+        public bool IsRegional
+        {
+            get => _isRegional;
             set
             {
                 if (value)
@@ -43,85 +45,85 @@ namespace CrossArc.GUI
         public long[] _rDecompSize;
         public uint[] _rFlags;
 
-        public FileNode(string text)
+        public FileNode(string text, ContextMenu menu)
         {
             this.Text = text;
-            ContextMenu = Form1.NodeContextMenu;
+            ContextMenu = menu;
 
             ImageKey = "file";
             SelectedImageKey = "file";
         }
 
-        public void Extract(bool compressed = false)
+        public void Extract(ARC arc, bool preserveCompression)
         {
             string DirectoryPath = this.DirectoryPath;
 
             Directory.CreateDirectory(DirectoryPath);
 
-            SaveFile(DirectoryPath + "/" + Text.Replace(":", ""), compressed);
+            SaveFile(DirectoryPath + "/" + Text.Replace(":", ""), arc, preserveCompression);
         }
 
-        public void ExtractFolder(bool compressed = false)
+        public void ExtractFolder(ARC arc, bool preserveCompression)
         {
             using (SaveFileDialog d = new SaveFileDialog())
             {
                 d.FileName = Text;
 
-                if(d.ShowDialog() == DialogResult.OK)
+                if (d.ShowDialog() == DialogResult.OK)
                 {
-                    SaveFile(d.FileName);
+                    SaveFile(d.FileName, arc, preserveCompression);
                 }
             }
         }
 
-        private static string[] Regions = new string[]
-{
-            "+jp_ja",
-"+us_en",
-"+us_fr",
-"+us_es",
-"+eu_en",
-"+eu_fr",
-"+eu_es",
-"+eu_de",
-"+eu_nl",
-"+eu_it",
-"+eu_ru",
-"+kr_ko",
-"+zh_cn",
-"+zh_tw"
-};
-
-        public ArcExtractInformation[] GetExtractInformation(string FileName, bool compressed = false)
+        private static readonly string[] regions =
         {
-            var extractInfo = new ArcExtractInformation(FileName, ArcOffset, CompSize, compressed ? CompSize : DecompSize);
+            "+jp_ja",
+            "+us_en",
+            "+us_fr",
+            "+us_es",
+            "+eu_en",
+            "+eu_fr",
+            "+eu_es",
+            "+eu_de",
+            "+eu_nl",
+            "+eu_it",
+            "+eu_ru",
+            "+kr_ko",
+            "+zh_cn",
+            "+zh_tw"
+        };
+
+        public ArcExtractInformation[] GetExtractInformation(string fileName, bool preserveCompressed = false)
+        {
+            var extractInfo = new ArcExtractInformation(fileName, ArcOffset, CompSize, preserveCompressed ? CompSize : DecompSize);
 
             if (IsRegional)
             {
                 if (Form1.SelectedRegion == 14)
                 {
                     List<ArcExtractInformation> info = new List<ArcExtractInformation>(_rArcOffset.Length);
-                    for(int i = 0; i < 13; i++)
+                    for (int i = 0; i < 13; i++)
                     {
-                        string newFileName = Path.GetDirectoryName(FileName) + "\\" + Path.GetFileNameWithoutExtension(FileName) + Regions[i] + Path.GetExtension(FileName); ;
+                        string newFileName = Path.GetDirectoryName(fileName) + "\\" + Path.GetFileNameWithoutExtension(fileName) + regions[i] + Path.GetExtension(fileName); ;
                         //Console.WriteLine(newFileName);
-                        extractInfo = new ArcExtractInformation(newFileName, _rArcOffset[i], (uint)_rCompSize[i], compressed ? (uint)_rCompSize[i] : (uint)_rDecompSize[i]);
+                        extractInfo = new ArcExtractInformation(newFileName, _rArcOffset[i], (uint)_rCompSize[i], preserveCompressed ? (uint)_rCompSize[i] : (uint)_rDecompSize[i]);
                         info.Add(extractInfo);
                     }
                     return info.ToArray();
                 }
-                string neFileName = Path.GetDirectoryName(FileName) + "\\" + Path.GetFileNameWithoutExtension(FileName) + Regions[Form1.SelectedRegion] + Path.GetExtension(FileName); ;
+                string neFileName = Path.GetDirectoryName(fileName) + "\\" + Path.GetFileNameWithoutExtension(fileName) + regions[Form1.SelectedRegion] + Path.GetExtension(fileName); ;
                 //Console.WriteLine(neFileName);
 
-                extractInfo = new ArcExtractInformation(neFileName, _rArcOffset[Form1.SelectedRegion], (uint)_rCompSize[Form1.SelectedRegion], compressed ? (uint)_rCompSize[Form1.SelectedRegion] : (uint)_rDecompSize[Form1.SelectedRegion]);
+                extractInfo = new ArcExtractInformation(neFileName, _rArcOffset[Form1.SelectedRegion], (uint)_rCompSize[Form1.SelectedRegion], preserveCompressed ? (uint)_rCompSize[Form1.SelectedRegion] : (uint)_rDecompSize[Form1.SelectedRegion]);
 
                 return new ArcExtractInformation[] { extractInfo };
             }
 
             return new ArcExtractInformation[] { extractInfo };
         }
-        
-        public void SaveFile(string FileName, bool compressed = false)
+
+        public void SaveFile(string fileName, ARC arc, bool preserveCompressed)
         {
             if (IsRegional)
             {
@@ -129,26 +131,26 @@ namespace CrossArc.GUI
                 {
                     //Extract all
                 }
-                if (compressed)
+                if (preserveCompressed)
                 {
                     // Make DecompSize = CompSize so it doesn't get decompressed
-                    File.WriteAllBytes(FileName, ARC.GetFileData(_rArcOffset[Form1.SelectedRegion], _rCompSize[Form1.SelectedRegion], _rCompSize[Form1.SelectedRegion]));
+                    File.WriteAllBytes(fileName, arc.GetFileData(_rArcOffset[Form1.SelectedRegion], _rCompSize[Form1.SelectedRegion], _rCompSize[Form1.SelectedRegion]));
                 }
                 else
                 {
-                    File.WriteAllBytes(FileName, ARC.GetFileData(_rArcOffset[Form1.SelectedRegion], _rCompSize[Form1.SelectedRegion], _rDecompSize[Form1.SelectedRegion]));
+                    File.WriteAllBytes(fileName, arc.GetFileData(_rArcOffset[Form1.SelectedRegion], _rCompSize[Form1.SelectedRegion], _rDecompSize[Form1.SelectedRegion]));
                 }
             }
             else
             {
-                if (compressed)
+                if (preserveCompressed)
                 {
                     // Make DecompSize = CompSize so it doesn't get decompressed
-                    File.WriteAllBytes(FileName, ARC.GetFileData(ArcOffset, CompSize, CompSize));
+                    File.WriteAllBytes(fileName, arc.GetFileData(ArcOffset, CompSize, CompSize));
                 }
                 else
                 {
-                    File.WriteAllBytes(FileName, ARC.GetFileData(ArcOffset, CompSize, DecompSize));
+                    File.WriteAllBytes(fileName, arc.GetFileData(ArcOffset, CompSize, DecompSize));
                 }
             }
         }

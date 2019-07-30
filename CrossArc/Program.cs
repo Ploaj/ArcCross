@@ -62,15 +62,7 @@ namespace CrossArc
                 Debug.WriteLine("Initiating Hash Dict: " + timer.ElapsedMilliseconds);
                 timer.Reset();
                 timer.Start();
-                try
-                {
-                    ARC.Open();
-                }
-                catch (Exception e)
-                {
-                    MessageBox.Show("Error Opening Arc", e.ToString());
-                    Application.Exit();
-                }
+
                 Application.Run(new Form1());
             }
             else
@@ -79,9 +71,6 @@ namespace CrossArc
             }
             
         }
-
-
-        
 
         public static void PrintStruct<T>(T Struct) where T : struct
         {

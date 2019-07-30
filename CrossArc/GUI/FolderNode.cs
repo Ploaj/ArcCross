@@ -16,13 +16,12 @@ namespace CrossArc.GUI
         // Some files may have the same name, so we need to store a list of nodes.
         public Dictionary<string, List<TreeNode>> NodesByName { get; } = new Dictionary<string, List<TreeNode>>();
 
-        public FolderNode(string text)
+        public FolderNode(string text, ContextMenu menu)
         {
             Text = text;
-            ContextMenu = Form1.NodeContextMenu;
+            ContextMenu = menu;
             AfterCollapse();
         }
-
 
         public void BeforeExpand()
         {
@@ -42,7 +41,7 @@ namespace CrossArc.GUI
             Nodes.Add(new TreeNode("Dummy"));
         }
 
-        public ArcExtractInformation[] GetExtractInformation(bool compressed = false)
+        public ArcExtractInformation[] GetExtractInformation(bool preserveCompression)
         {
             Queue<TreeNode> NodeList = new Queue<TreeNode>();
             List<ArcExtractInformation> info = new List<ArcExtractInformation>();
@@ -60,7 +59,7 @@ namespace CrossArc.GUI
                 TreeNode n = NodeList.Dequeue();
                 if (n is FileNode fileNode)
                 {
-                    info.AddRange(fileNode.GetExtractInformation(fileNode.FullFilePath, compressed));
+                    info.AddRange(fileNode.GetExtractInformation(fileNode.FullFilePath, preserveCompression));
                 }
                 else
                 {
@@ -77,7 +76,7 @@ namespace CrossArc.GUI
             return info.ToArray();
         }
 
-        public void Extract(bool compressed = false)
+        public void Extract(ARC arc, bool preserveCompression)
         {
             Queue<TreeNode> NodeList = new Queue<TreeNode>();
 
@@ -90,7 +89,7 @@ namespace CrossArc.GUI
                 TreeNode n = NodeList.Dequeue();
                 if (n is FileNode)
                 {
-                    ((FileNode)n).Extract(compressed);
+                    ((FileNode)n).Extract(arc, preserveCompression);
                 }
                 else
                 {
@@ -99,7 +98,8 @@ namespace CrossArc.GUI
                 }
             }
         }
-        public void ExtractFolder(bool compressed = false)
+
+        public void ExtractFolder(ARC arc, bool preserveCompression)
         {
             using (SaveFileDialog d = new SaveFileDialog())
             {
@@ -111,7 +111,7 @@ namespace CrossArc.GUI
                     {
                         if(f is FileNode)
                         {
-                            ((FileNode)f).SaveFile(Path.GetDirectoryName(d.FileName) + "/" + f.Text, compressed);
+                            ((FileNode)f).SaveFile(Path.GetDirectoryName(d.FileName) + "/" + f.Text, arc, preserveCompression);
                         }
                     }
                 }
