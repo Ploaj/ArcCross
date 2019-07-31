@@ -9,59 +9,41 @@ namespace CrossArc
 {
     public partial class Form1 : Form
     {
-        private FolderNode Root = new FolderNode("root");
-        private FolderNode Stream = new FolderNode("stream");
+        private readonly FolderNode rootNode;
+        private readonly FolderNode streamNode;
+
+        private readonly ARC arc;
 
         public static int SelectedRegion = 0;
 
-        public static ContextMenu NodeContextMenu
-        {
-            get
-            {
-                if (_nodeContextMenu == null)
-                {
-                    _nodeContextMenu = new ContextMenu();
+        public ContextMenu NodeContextMenu { get; }
 
-                    MenuItem Ex = new MenuItem("Extract");
-                    Ex.Click += Extract;
-                    _nodeContextMenu.MenuItems.Add(Ex);
-
-                    MenuItem Exc = new MenuItem("Extract Compressed");
-                    Exc.Click += ExtractCompressed;
-                    _nodeContextMenu.MenuItems.Add(Exc);
-                }
-                return _nodeContextMenu;
-            }
-        }
-        public static ContextMenu _nodeContextMenu;
-
-        public static void Extract(object sender, EventArgs args)
+        public void Extract(object sender, EventArgs args)
         {
             TreeNode node = Form1.fileTree.SelectedNode;
             if (node == null)
             {
                 return;
             }
-            if (node is FolderNode foldernode)
+            if (node is FolderNode folderNode)
             {
-                var info = foldernode.GetExtractInformation();
+                var info = folderNode.GetExtractInformation(false);
 
-                ExtractProgressBar pb = new ExtractProgressBar();
+                ExtractProgressBar pb = new ExtractProgressBar(arc);
                 pb.Show();
                 pb.Extract(info);
             }
-            if (node is FileNode filenode)
+            if (node is FileNode fileNode)
             {
-                var info = filenode.GetExtractInformation(filenode.FullFilePath);
+                var info = fileNode.GetExtractInformation(fileNode.FullFilePath);
 
-                ExtractProgressBar pb = new ExtractProgressBar();
+                ExtractProgressBar pb = new ExtractProgressBar(arc);
                 pb.Show();
                 pb.Extract(info);
             }
         }
 
-
-        public static void ExtractFolder(object sender, EventArgs args)
+        public void ExtractFolder(object sender, EventArgs args)
         {
             TreeNode node = Form1.fileTree.SelectedNode;
             if (node == null)
@@ -70,15 +52,15 @@ namespace CrossArc
             }
             if (node is FolderNode)
             {
-                ((FolderNode)node).ExtractFolder();
+                ((FolderNode)node).ExtractFolder(arc, false);
             }
             if (node is FileNode)
             {
-                ((FileNode)node).ExtractFolder();
+                ((FileNode)node).ExtractFolder(arc, false);
             }
         }
 
-        public static void ExtractCompressed(object sender, EventArgs args)
+        public void ExtractCompressed(object sender, EventArgs args)
         {
             TreeNode node = Form1.fileTree.SelectedNode;
             if (node == null)
@@ -89,7 +71,7 @@ namespace CrossArc
             {
                 var info = foldernode.GetExtractInformation(true);
 
-                ExtractProgressBar pb = new ExtractProgressBar();
+                ExtractProgressBar pb = new ExtractProgressBar(arc);
                 pb.Show();
                 pb.Extract(info);
             }
@@ -97,13 +79,13 @@ namespace CrossArc
             {
                 var info = filenode.GetExtractInformation(filenode.FullFilePath, true);
 
-                ExtractProgressBar pb = new ExtractProgressBar();
+                ExtractProgressBar pb = new ExtractProgressBar(arc);
                 pb.Show();
                 pb.Extract(info);
             }
         }
 
-        public static void ExtractCompressedFolder(object sender, EventArgs args)
+        public void ExtractCompressedFolder(object sender, EventArgs args)
         {
             TreeNode node = Form1.fileTree.SelectedNode;
             if (node == null)
@@ -112,11 +94,11 @@ namespace CrossArc
             }
             if (node is FolderNode)
             {
-                ((FolderNode)node).ExtractFolder();
+                ((FolderNode)node).ExtractFolder(arc, true);
             }
             if (node is FileNode)
             {
-                ((FileNode)node).ExtractFolder();
+                ((FileNode)node).ExtractFolder(arc, true);
             }
         }
 
@@ -124,44 +106,53 @@ namespace CrossArc
         {
             InitializeComponent();
 
-            fileTree.BeforeExpand += folderTree_BeforeExpand;
+            NodeContextMenu = new ContextMenu();
 
-            fileTree.NodeMouseClick += (sender, args) => fileTree.SelectedNode = args.Node;
+            MenuItem extract = new MenuItem("Extract");
+            extract.Click += Extract;
+            NodeContextMenu.MenuItems.Add(extract);
 
-            fileTree.HideSelection = false;
+            MenuItem extractCompressed = new MenuItem("Extract Compressed");
+            extractCompressed.Click += ExtractCompressed;
+            NodeContextMenu.MenuItems.Add(extractCompressed);
 
-            fileTree.ImageList = new ImageList();
-            fileTree.ImageList.Images.Add("folder", Properties.Resources.folder);
-            fileTree.ImageList.Images.Add("file", Properties.Resources.file);
+            rootNode = new FolderNode("root", NodeContextMenu);
+            streamNode = new FolderNode("stream", NodeContextMenu);
 
-            regionCB.SelectedIndex = 0;
+            InitializeGui();
 
-            // Files
+            var path = GetArcPath();
+            arc = new ARC(path);
+
+            // TODO: This step is very slow.
+            InitializeTreeView();
+        }
+
+        private void InitializeTreeView()
+        {
             long TotalSize = 0;
             var timer = new Stopwatch();
             timer.Start();
-            if (ARC.FileInformation != null || ARC.FileInformationV2 != null)
+
+            foreach (FileOffsetGroup g in arc.GetFiles())
             {
-                foreach (FileOffsetGroup g in ARC.GetFiles())
-                {
-                    FolderNode Folder = (FolderNode)GetFolderFromPath(g.Path, Root);
-                    if (g.CompSize == null)
-                        continue;
+                FolderNode Folder = (FolderNode)GetFolderFromPath(g.Path, rootNode);
+                if (g.CompSize == null)
+                    continue;
 
-                    FileNode fNode = CreateFileNode(g);
+                FileNode fNode = CreateFileNode(g);
 
-                    TotalSize += fNode.DecompSize;
+                TotalSize += fNode.DecompSize;
 
-                    if (!Folder.NodesByName.ContainsKey(fNode.Text))
-                        Folder.NodesByName.Add(fNode.Text, new List<TreeNode>());
-                    Folder.NodesByName[fNode.Text].Add(fNode);
-                }
+                if (!Folder.NodesByName.ContainsKey(fNode.Text))
+                    Folder.NodesByName.Add(fNode.Text, new List<TreeNode>());
+                Folder.NodesByName[fNode.Text].Add(fNode);
             }
 
-            foreach (var g in ARC.GetStreamFiles())
+            foreach (var g in arc.GetStreamFiles())
             {
                 string FPath = g.FileName.Replace("stream:/", "");
-                FolderNode Folder = (FolderNode)GetFolderFromPath(Path.GetDirectoryName(FPath).Replace("\\", "/"), Stream);
+                FolderNode Folder = (FolderNode)GetFolderFromPath(Path.GetDirectoryName(FPath).Replace("\\", "/"), streamNode);
 
                 FileNode fNode = CreateFileNodeFromStreamFile(g, FPath);
 
@@ -175,55 +166,89 @@ namespace CrossArc
             Debug.WriteLine("Total File Size: " + FormatBytes(TotalSize));
 
             fileTree.BeginUpdate();
-            fileTree.Nodes.Add(Root);
-            fileTree.Nodes.Add(Stream);
+            fileTree.Nodes.Add(rootNode);
+            fileTree.Nodes.Add(streamNode);
             fileTree.EndUpdate();
         }
 
-        private static FileNode CreateFileNodeFromStreamFile(FileOffsetGroup g, string FPath)
+        private void InitializeGui()
         {
-            FileNode fNode = new FileNode(Path.GetFileName(FPath))
+            fileTree.BeforeExpand += folderTree_BeforeExpand;
+
+            fileTree.NodeMouseClick += (sender, args) => fileTree.SelectedNode = args.Node;
+
+            fileTree.HideSelection = false;
+
+            fileTree.ImageList = new ImageList();
+            fileTree.ImageList.Images.Add("folder", Properties.Resources.folder);
+            fileTree.ImageList.Images.Add("file", Properties.Resources.file);
+
+            regionCB.SelectedIndex = 0;
+        }
+
+        private static string GetArcPath()
+        {
+            if (!File.Exists("data.arc"))
             {
-                ArcOffset = g.ArcOffset[0],
-                CompSize = (uint)g.CompSize[0],
-                DecompSize = (uint)g.DecompSize[0],
-                Flags = g.Flags[0],
-                FullFilePath = FPath
+                using (OpenFileDialog d = new OpenFileDialog())
+                {
+                    d.Title = "Select your data.arc file";
+                    d.FileName = "data.arc";
+                    d.Filter = "Smash Ultimate ARC (*.arc)|*.arc";
+
+                    if (d.ShowDialog() == DialogResult.OK)
+                    {
+                        return d.FileName;
+                    }
+                }
+            }
+
+            return "data.arc";
+        }
+
+        private FileNode CreateFileNodeFromStreamFile(FileOffsetGroup fileOffsetGroup, string filePath)
+        {
+            FileNode fNode = new FileNode(Path.GetFileName(filePath), NodeContextMenu)
+            {
+                ArcOffset = fileOffsetGroup.ArcOffset[0],
+                CompSize = (uint)fileOffsetGroup.CompSize[0],
+                DecompSize = (uint)fileOffsetGroup.DecompSize[0],
+                Flags = fileOffsetGroup.Flags[0],
+                FullFilePath = filePath
             };
 
-            if ((g.ArcOffset.Length > 1))
+            if ((fileOffsetGroup.IsRegional))
             {
                 fNode.IsRegional = true;
-                fNode._rArcOffset = g.ArcOffset;
-                fNode._rCompSize = g.CompSize;
-                fNode._rDecompSize = g.DecompSize;
-                fNode._rFlags = g.Flags;
-                fNode.FullFilePath = FPath;
+                fNode._rArcOffset = fileOffsetGroup.ArcOffset;
+                fNode._rCompSize = fileOffsetGroup.CompSize;
+                fNode._rDecompSize = fileOffsetGroup.DecompSize;
+                fNode._rFlags = fileOffsetGroup.Flags;
+                fNode.FullFilePath = filePath;
             }
 
             return fNode;
         }
 
-        private static FileNode CreateFileNode(FileOffsetGroup g)
+        private FileNode CreateFileNode(FileOffsetGroup fileOffsetGroup)
         {
-            FileNode fNode = new FileNode(g.FileName)
+            FileNode fNode = new FileNode(fileOffsetGroup.FileName, NodeContextMenu)
             {
-                ArcOffset = g.ArcOffset[0],
-                CompSize = (uint)g.CompSize[0],
-                DecompSize = (uint)g.DecompSize[0],
-                Flags = g.Flags[0],
-                FullFilePath = g.Path + g.FileName
+                ArcOffset = fileOffsetGroup.ArcOffset[0],
+                CompSize = (uint)fileOffsetGroup.CompSize[0],
+                DecompSize = (uint)fileOffsetGroup.DecompSize[0],
+                Flags = fileOffsetGroup.Flags[0],
+                FullFilePath = fileOffsetGroup.Path + fileOffsetGroup.FileName
             };
 
-            if ((g.ArcOffset.Length > 1))
+            if ((fileOffsetGroup.IsRegional))
             {
-
                 fNode.IsRegional = true;
-                fNode._rArcOffset = g.ArcOffset;
-                fNode._rCompSize = g.CompSize;
-                fNode._rDecompSize = g.DecompSize;
-                fNode._rFlags = g.Flags;
-                fNode.FullFilePath = g.Path + g.FileName;
+                fNode._rArcOffset = fileOffsetGroup.ArcOffset;
+                fNode._rCompSize = fileOffsetGroup.CompSize;
+                fNode._rDecompSize = fileOffsetGroup.DecompSize;
+                fNode._rFlags = fileOffsetGroup.Flags;
+                fNode.FullFilePath = fileOffsetGroup.Path + fileOffsetGroup.FileName;
             }
 
             return fNode;
@@ -258,7 +283,7 @@ namespace CrossArc
                 {
                     if (file.Text.EndsWith(extension))
                     {
-                        file.Extract(false);
+                        file.Extract(arc, false);
                     }
                 }
             }
@@ -277,7 +302,7 @@ namespace CrossArc
                         {
                             if (file.Text.EndsWith(extension))
                             {
-                                file.Extract(false);
+                                file.Extract(arc, false);
                             }
                         }
                     }
@@ -288,7 +313,7 @@ namespace CrossArc
         public void MKDir(string path)
         {
             string[] levels = path.Split('/');
-            var subnodes = Root.NodesByName;
+            var subnodes = rootNode.NodesByName;
             for (int i = 0; i < levels.Length; i++)
             {
                 if (levels[i].Equals(""))
@@ -296,7 +321,7 @@ namespace CrossArc
                 FolderNode folder = (FolderNode)FindFolder(levels[i], subnodes);
                 if (folder == null)
                 {
-                    folder = new FolderNode(levels[i]);
+                    folder = new FolderNode(levels[i], NodeContextMenu);
                     subnodes[folder.Text].Add(folder);
                 }
                 subnodes = folder.NodesByName;
@@ -316,7 +341,7 @@ namespace CrossArc
                 folderNode = (FolderNode)FindFolder(levels[i], subnodes);
                 if (folderNode == null)
                 {
-                    FolderNode newFolder = new FolderNode(levels[i]);
+                    FolderNode newFolder = new FolderNode(levels[i], NodeContextMenu);
                     if (!subnodes.ContainsKey(newFolder.Text))
                         subnodes.Add(newFolder.Text, new List<TreeNode>());
                     subnodes[newFolder.Text].Add(newFolder);
@@ -326,7 +351,7 @@ namespace CrossArc
             }
 
             if (folderNode == null)
-                folderNode = new FolderNode(path);
+                folderNode = new FolderNode(path, NodeContextMenu);
 
             return folderNode;
         }

@@ -7,10 +7,12 @@ namespace CrossArc.GUI
 {
     public partial class ExtractProgressBar : Form
     {
+        private readonly ARC arc;
         private ArcExtractInformation[] toExtract;
 
-        public ExtractProgressBar()
+        public ExtractProgressBar(ARC arc)
         {
+            this.arc = arc;
             InitializeComponent();
             TopMost = true;
         }
@@ -42,7 +44,7 @@ namespace CrossArc.GUI
         private void ExtractFileInformation()
         {
             int index = 0;
-            using (BinaryReader r = new BinaryReader(new FileStream(ARC.FilePath, FileMode.Open)))
+            using (BinaryReader r = new BinaryReader(new FileStream(arc.FilePath, FileMode.Open)))
             {
                 foreach (var file in toExtract)
                 {
