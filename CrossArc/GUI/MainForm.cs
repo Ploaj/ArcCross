@@ -255,18 +255,33 @@ namespace CrossArc.GUI
             }
         }
 
+        private bool DownloadingHashes = false;
+
         private void updateHashesToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            if (DownloadingHashes)
+                return;
+            var dl = MessageBox.Show("", "Download Hashes?", MessageBoxButtons.YesNo);
+
+            if(dl == DialogResult.Yes)
             using (var client = new WebClient())
             {
                 Cursor.Current = Cursors.WaitCursor;
                 MessageBox.Show("Downloading Hashes please wait...");
-                client.DownloadFile("https://github.com/ultimate-research/archive-hashes/raw/master/Hashes", "Hashes.txt");
+                DownloadingHashes = true;
+                DownloadHashes();
+                DownloadingHashes = false;
                 Cursor.Current = Cursors.Arrow;
             }
         }
 
-
+        private void DownloadHashes()
+        {
+            using (var client = new WebClient())
+            {
+                client.DownloadFile("https://github.com/ultimate-research/archive-hashes/raw/master/Hashes", "Hashes.txt");
+            }
+        }
 
 
         private object lockTree = new object();
