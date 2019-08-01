@@ -9,7 +9,10 @@ namespace ArcCross
 {
     public class ARC
     {
-        private string FilePath;
+        private string filePath;
+
+        // Optimize repeated calls to GetFileList
+        private List<string> filePaths = new List<string>();
 
         private const ulong Magic = 0xABCDEF9876543210;
 
@@ -62,12 +65,12 @@ namespace ArcCross
         /// <summary>
         /// Initializes file system from file
         /// </summary>
-        public void InitFileSystem(string FilePath, bool readOnly = true)
+        public void InitFileSystem(string arcFilePath, bool readOnly = true)
         {
-            using (ExtBinaryReader reader = new ExtBinaryReader(new FileStream(FilePath, FileMode.Open)))
+            using (ExtBinaryReader reader = new ExtBinaryReader(new FileStream(arcFilePath, FileMode.Open)))
             {
                 Initialized = Init(reader);
-                this.FilePath = FilePath;
+                filePath = arcFilePath;
             }
             pathToFileInfo = new Dictionary<uint, _sFileInformationV2>();
 
@@ -495,23 +498,31 @@ namespace ArcCross
         /// <returns></returns>
         public List<string> GetFileList()
         {
+            // Optimize repeated calls.
+            if (filePaths.Count > 0)
+                return filePaths;
+
             if (Version == 0x00010000)
-                return GetFileListV1();
-
-            var files = new List<string>(fileInfoV2.Length);
-
-            foreach(var fileinfo in fileInfoV2)
             {
-                var path = fileInfoPath[fileinfo.PathIndex];
+                filePaths = GetFileListV1();
+            }
+            else
+            {
+                filePaths = new List<string>(fileInfoV2.Length);
 
-                string pathString = HashDict.GetString(path.Parent, (int)(path.Unk5 & 0xFF));
-                if (pathString.StartsWith("0x"))
-                    pathString += "/";
+                foreach (var fileinfo in fileInfoV2)
+                {
+                    var path = fileInfoPath[fileinfo.PathIndex];
 
-                files.Add(pathString + HashDict.GetString(path.FileName, (int)(path.Unk6 & 0xFF)));
+                    string pathString = HashDict.GetString(path.Parent, (int)(path.Unk5 & 0xFF));
+                    if (pathString.StartsWith("0x"))
+                        pathString += "/";
+
+                    filePaths.Add(pathString + HashDict.GetString(path.FileName, (int)(path.Unk6 & 0xFF)));
+                }
             }
 
-            return files;
+            return filePaths;
         }
 
         /// <summary>
@@ -561,7 +572,7 @@ namespace ArcCross
             if (!Initialized)
                 return new byte[0];
             byte[] data;
-            using (BinaryReader reader = new BinaryReader(new FileStream(FilePath, FileMode.Open)))
+            using (BinaryReader reader = new BinaryReader(new FileStream(filePath, FileMode.Open)))
             {
                 reader.BaseStream.Position = offset;
                 data = reader.ReadBytes((int)Size);
