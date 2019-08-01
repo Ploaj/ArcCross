@@ -7,8 +7,10 @@ using Zstandard.Net;
 
 namespace ArcCross
 {
-    public class ARC
+    public class Arc
     {
+        public int Version { get; set; }
+
         private string filePath;
 
         // Optimize repeated calls to GetFileList
@@ -18,10 +20,7 @@ namespace ArcCross
 
         private _sArcHeader header;
 
-        public int Version { get; set; }
-
         // stream
-
         private _sStreamUnk[] streamUnk;
         private _sStreamHashToName[] streamHashToName;
         private _sStreamNameToHash[] streamNameToHash;
@@ -29,15 +28,14 @@ namespace ArcCross
         private _sStreamOffset[] streamOffsets;
 
         // file system
-
-        private _sFileSystemHeader FSHeader;
-        private byte[] regionalbytes;
-        private _sStreamHeader StreamHeader;
+        private _sFileSystemHeader fsHeader;
+        private byte[] regionalBytes;
+        private _sStreamHeader streamHeader;
 
         private _sFileInformationPath[] fileInfoPath;
         private _sFileInformationIndex[] fileInfoIndex;
         private _sFileInformationSubIndex[] fileInfoSubIndex;
-        public _sFileInformationV2[] fileInfoV2;
+        private _sFileInformationV2[] fileInfoV2;
 
         private _sSubFileInfo[] subFiles;
 
@@ -45,22 +43,19 @@ namespace ArcCross
         private _sHashIndexGroup[] filePathToIndexHashGroup;
 
         // Directory information
-
         private _sHashIndexGroup[] directoryHashGroup;
         private _sDirectoryList[] directoryList;
         private _sDirectoryOffset[] directoryOffsets;
         private _sHashIndexGroup[] directoryChildHashGroup;
 
-
         // V1 arc only
-        public _sFileInformationV1[] fileInfoV1;
-
+        private _sFileInformationV1[] fileInfoV1;
 
         // handling
-        public bool Initialized { get; internal set; } = false;
+        public bool Initialized { get; internal set; }
 
-        public Dictionary<uint, _sFileInformationV2> pathToFileInfo;
-        public Dictionary<uint, _sFileInformationV1> pathToFileInfoV1;
+        private Dictionary<uint, _sFileInformationV2> pathToFileInfo;
+        private Dictionary<uint, _sFileInformationV1> pathToFileInfoV1;
 
         /// <summary>
         /// Initializes file system from file
@@ -139,18 +134,18 @@ namespace ArcCross
         {
             using (ExtBinaryReader reader = new ExtBinaryReader(new MemoryStream(fileSystemTable)))
             {
-                FSHeader = reader.ReadType<_sFileSystemHeader>();
+                fsHeader = reader.ReadType<_sFileSystemHeader>();
 
-                uint ExtraFolder = 0;
-                uint ExtraCount = 0;
+                uint extraFolder = 0;
+                uint extraCount = 0;
 
                 if(fileSystemTable.Length >= 0x2992DD4)
                 {
                     // Version 3+
                     Version = reader.ReadInt32();
 
-                    ExtraFolder = reader.ReadUInt32(); 
-                    ExtraCount = reader.ReadUInt32(); 
+                    extraFolder = reader.ReadUInt32(); 
+                    extraCount = reader.ReadUInt32(); 
 
                     reader.ReadBytes(0x10);  // some extra thing :thinking
                 }
@@ -161,54 +156,54 @@ namespace ArcCross
                 }
 
                 // skip this for now
-                regionalbytes = reader.ReadBytes(0xE * 12);
+                regionalBytes = reader.ReadBytes(0xE * 12);
 
                 // Streams
-                StreamHeader = reader.ReadType<_sStreamHeader>();
+                streamHeader = reader.ReadType<_sStreamHeader>();
 
-                streamUnk = reader.ReadType<_sStreamUnk>(StreamHeader.UnkCount);
+                streamUnk = reader.ReadType<_sStreamUnk>(streamHeader.UnkCount);
                 
-                streamHashToName = reader.ReadType<_sStreamHashToName>(StreamHeader.StreamHashCount);
+                streamHashToName = reader.ReadType<_sStreamHashToName>(streamHeader.StreamHashCount);
                 
-                streamNameToHash = reader.ReadType<_sStreamNameToHash>(StreamHeader.StreamHashCount);
+                streamNameToHash = reader.ReadType<_sStreamNameToHash>(streamHeader.StreamHashCount);
 
-                streamIndexToFile = reader.ReadType<_sStreamIndexToOffset>(StreamHeader.StreamIndexToOffsetCount);
+                streamIndexToFile = reader.ReadType<_sStreamIndexToOffset>(streamHeader.StreamIndexToOffsetCount);
 
-                streamOffsets = reader.ReadType<_sStreamOffset>(StreamHeader.StreamOffsetCount);
+                streamOffsets = reader.ReadType<_sStreamOffset>(streamHeader.StreamOffsetCount);
 
                 Console.WriteLine(reader.BaseStream.Position.ToString("X")); 
 
                 // Unknown
-                uint UnkCount1 = reader.ReadUInt32();
-                uint UnkCount2 = reader.ReadUInt32();
-                fileInfoUnknownTable = reader.ReadType<_sFileInformationUnknownTable>(UnkCount2);
-                filePathToIndexHashGroup = reader.ReadType<_sHashIndexGroup>(UnkCount1);
+                uint unkCount1 = reader.ReadUInt32();
+                uint unkCount2 = reader.ReadUInt32();
+                fileInfoUnknownTable = reader.ReadType<_sFileInformationUnknownTable>(unkCount2);
+                filePathToIndexHashGroup = reader.ReadType<_sHashIndexGroup>(unkCount1);
 
                 // FileTables
                 
-                fileInfoPath = reader.ReadType<_sFileInformationPath>(FSHeader.FileInformationPathCount);
+                fileInfoPath = reader.ReadType<_sFileInformationPath>(fsHeader.FileInformationPathCount);
 
-                fileInfoIndex = reader.ReadType<_sFileInformationIndex>(FSHeader.FileInformationIndexCount);
+                fileInfoIndex = reader.ReadType<_sFileInformationIndex>(fsHeader.FileInformationIndexCount);
 
                 // directory tables
 
                 // directory hashes by length and index to directory probably 0x6000 something
                 Console.WriteLine(reader.BaseStream.Position.ToString("X"));
-                directoryHashGroup = reader.ReadType<_sHashIndexGroup>(FSHeader.DirectoryCount);
+                directoryHashGroup = reader.ReadType<_sHashIndexGroup>(fsHeader.DirectoryCount);
                 
-                directoryList = reader.ReadType<_sDirectoryList>(FSHeader.DirectoryCount);
+                directoryList = reader.ReadType<_sDirectoryList>(fsHeader.DirectoryCount);
                 
-                directoryOffsets = reader.ReadType<_sDirectoryOffset>(FSHeader.DirectoryOffsetCount1 + FSHeader.DirectoryOffsetCount2 + ExtraFolder);
+                directoryOffsets = reader.ReadType<_sDirectoryOffset>(fsHeader.DirectoryOffsetCount1 + fsHeader.DirectoryOffsetCount2 + extraFolder);
                 
-                directoryChildHashGroup = reader.ReadType<_sHashIndexGroup>(FSHeader.DirectoryHashSearchCount);
+                directoryChildHashGroup = reader.ReadType<_sHashIndexGroup>(fsHeader.DirectoryHashSearchCount);
 
                 // file information tables
                 Console.WriteLine(reader.BaseStream.Position.ToString("X"));
-                fileInfoV2 = reader.ReadType<_sFileInformationV2>(FSHeader.FileInformationCount + FSHeader.SubFileCount2 + ExtraCount);
+                fileInfoV2 = reader.ReadType<_sFileInformationV2>(fsHeader.FileInformationCount + fsHeader.SubFileCount2 + extraCount);
                 
-                fileInfoSubIndex = reader.ReadType<_sFileInformationSubIndex>(FSHeader.FileInformationSubIndexCount + FSHeader.SubFileCount2 + ExtraCount);
+                fileInfoSubIndex = reader.ReadType<_sFileInformationSubIndex>(fsHeader.FileInformationSubIndexCount + fsHeader.SubFileCount2 + extraCount);
                 
-                subFiles = reader.ReadType<_sSubFileInfo>(FSHeader.SubFileCount + FSHeader.SubFileCount2);
+                subFiles = reader.ReadType<_sSubFileInfo>(fsHeader.SubFileCount + fsHeader.SubFileCount2);
 
                 Console.WriteLine(reader.BaseStream.Position.ToString("X"));
                 //uint max = 0;
@@ -259,11 +254,11 @@ namespace ArcCross
             MemoryStream stream = new MemoryStream();
             using (BinaryWriter writer = new BinaryWriter(stream))
             {
-                writer.Write(GetBytes(FSHeader));
+                writer.Write(GetBytes(fsHeader));
 
-                writer.Write(regionalbytes);
+                writer.Write(regionalBytes);
 
-                writer.Write(GetBytes(StreamHeader));
+                writer.Write(GetBytes(streamHeader));
 
                 writer.Write(GetBytes(streamUnk));
 
@@ -348,36 +343,36 @@ namespace ArcCross
                 var header = r.ReadType<_sSearchHashHeader>();
 
                 // paths
-                var ActualPathHashSection = r.ReadType<_sHashIndexGroup>(header.FolderLengthHashCount);
+                var actualPathHashSection = r.ReadType<_sHashIndexGroup>(header.FolderLengthHashCount);
 
-                int MaxFolderIndex = 0;
-                foreach(var section in ActualPathHashSection)
-                    MaxFolderIndex = Math.Max(MaxFolderIndex, section.index >> 8);
-                Console.WriteLine("Max FolderIndex " + MaxFolderIndex.ToString("X"));
+                int maxFolderIndex = 0;
+                foreach(var section in actualPathHashSection)
+                    maxFolderIndex = Math.Max(maxFolderIndex, section.index >> 8);
+                Console.WriteLine("Max FolderIndex " + maxFolderIndex.ToString("X"));
 
                 // path lookup group
-                var UnkHashGroup = r.ReadType<_sHashGroup>(header.FolderLengthHashCount);
+                var unkHashGroup = r.ReadType<_sHashGroup>(header.FolderLengthHashCount);
                 Console.WriteLine("End at: " + r.BaseStream.Position.ToString("X"));
 
                 // file paths
-                var ActualFullPath = r.ReadType<_sHashIndexGroup>(header.SomeCount3);
+                var actualFullPath = r.ReadType<_sHashIndexGroup>(header.SomeCount3);
                 Console.WriteLine("End at: " + r.BaseStream.Position.ToString("X"));
 
                 // index to look up pathgroup? why they needed a separate index who knows...
-                var IndexTable = r.ReadType<int>(header.SomeCount3);
+                var indexTable = r.ReadType<int>(header.SomeCount3);
                 Console.WriteLine("End at: " + r.BaseStream.Position.ToString("X"));
 
                 // file path lookup group
-                var PathNameHashGroupLookup = r.ReadType<_sHashGroup>(header.SomeCount4);
+                var pathNameHashGroupLookup = r.ReadType<_sHashGroup>(header.SomeCount4);
                 Console.WriteLine("End at: " + r.BaseStream.Position.ToString("X"));
 
-                int MaxIntTableValue = 0;
-                foreach (var g in UnkHashGroup)
+                int maxIntTableValue = 0;
+                foreach (var g in unkHashGroup)
                 {
-                    MaxIntTableValue = Math.Max((int)g.ExtensionHash, MaxIntTableValue);
+                    maxIntTableValue = Math.Max((int)g.ExtensionHash, maxIntTableValue);
                     //Console.WriteLine(HashDict.GetString(g.Hash));
                 }
-                Console.WriteLine("Max table value: " + MaxIntTableValue.ToString("X"));
+                Console.WriteLine("Max table value: " + maxIntTableValue.ToString("X"));
 
                 
                 /*using (StreamWriter writer = new StreamWriter(new FileStream("print.txt", FileMode.Create)))
@@ -393,7 +388,7 @@ namespace ArcCross
         /// </summary>
         /// <param name="reader"></param>
         /// <returns></returns>
-        private byte[] ReadCompressedTable(ExtBinaryReader reader)
+        private static byte[] ReadCompressedTable(ExtBinaryReader reader)
         {
             var compHeader = reader.ReadType<_sCompressedTableHeader>();
 
@@ -416,22 +411,20 @@ namespace ArcCross
             }
         }
 
-        #region functions
-
         public long MaxOffset()
         {
             long max = 0;
             foreach(var fi in fileInfoV2)
             {
                 var path = fileInfoPath[fi.PathIndex];
-                var subindex = fileInfoSubIndex[fi.SubIndexIndex];
+                var subIndex = fileInfoSubIndex[fi.SubIndexIndex];
 
-                var subfile = subFiles[subindex.SubFileIndex];
+                var subFile = subFiles[subIndex.SubFileIndex];
 
-                var directoryOffset = directoryOffsets[subindex.DirectoryOffsetIndex];
-                max = Math.Max(max, header.FileDataOffset + directoryOffset.Offset + (subfile.Offset<<2));
+                var directoryOffset = directoryOffsets[subIndex.DirectoryOffsetIndex];
+                max = Math.Max(max, header.FileDataOffset + directoryOffset.Offset + (subFile.Offset<<2));
                 
-                if (header.FileDataOffset + directoryOffset.Offset + (subfile.Offset << 2) > header.FileDataOffset2)
+                if (header.FileDataOffset + directoryOffset.Offset + (subFile.Offset << 2) > header.FileDataOffset2)
                     Console.WriteLine(HashDict.GetString(path.FileName));
             }
             return max;
@@ -510,9 +503,9 @@ namespace ArcCross
             {
                 filePaths = new List<string>(fileInfoV2.Length);
 
-                foreach (var fileinfo in fileInfoV2)
+                foreach (var fileInfo in fileInfoV2)
                 {
-                    var path = fileInfoPath[fileinfo.PathIndex];
+                    var path = fileInfoPath[fileInfo.PathIndex];
 
                     string pathString = HashDict.GetString(path.Parent, (int)(path.Unk5 & 0xFF));
                     if (pathString.StartsWith("0x"))
@@ -529,45 +522,41 @@ namespace ArcCross
         /// returns the decompressed file
         /// </summary>
         /// <param name="filepath"></param>
+        /// <param name="regionIndex"></param>
         /// <returns></returns>
-        public byte[] GetFile(string filepath, int region = 0)
+        public byte[] GetFile(string filepath, int regionIndex = 0)
         {
-            long Offset;
-            uint CompSize, DecompSize;
-            bool regional;
-            GetFileInformation(filepath, out Offset, out CompSize, out DecompSize, out regional, region);
+            GetFileInformation(filepath, out long offset, out uint compSize, out uint decompSize, out bool regional, regionIndex);
 
-            if(DecompSize > 0 && DecompSize != CompSize)
+            if(decompSize > 0 && decompSize != compSize)
             {
-                var decompressed = ExtBinaryReader.DecompressZstd(GetSection(Offset, CompSize));
-                if (decompressed.Length != DecompSize)
+                var decompressed = ExtBinaryReader.DecompressZstd(GetSection(offset, compSize));
+                if (decompressed.Length != decompSize)
                     throw new InvalidDataException("Error decompressing file");
                 return decompressed;
             }
-            return GetSection(Offset, CompSize);
+            return GetSection(offset, compSize);
         }
 
         /// <summary>
         /// returns the compressed version of the file (if it is compressed)
         /// </summary>
         /// <param name="filepath"></param>
+        /// <param name="regionIndex"></param>
         /// <returns></returns>
-        public byte[] GetFileCompressed(string filepath, int region = 0)
+        public byte[] GetFileCompressed(string filepath, int regionIndex = 0)
         {
-            long Offset;
-            uint CompSize, DecompSize;
-            bool regional;
-            GetFileInformation(filepath, out Offset, out CompSize, out DecompSize, out regional, region);
-            return GetSection(Offset, CompSize);
+            GetFileInformation(filepath, out long offset, out uint compSize, out uint decompSize, out bool regional, regionIndex);
+            return GetSection(offset, compSize);
         }
 
         /// <summary>
         /// returns a section of the arc
         /// </summary>
         /// <param name="offset"></param>
-        /// <param name="Size"></param>
+        /// <param name="size"></param>
         /// <returns></returns>
-        private byte[] GetSection(long offset, uint Size)
+        private byte[] GetSection(long offset, uint size)
         {
             if (!Initialized)
                 return new byte[0];
@@ -575,7 +564,7 @@ namespace ArcCross
             using (BinaryReader reader = new BinaryReader(new FileStream(filePath, FileMode.Open)))
             {
                 reader.BaseStream.Position = offset;
-                data = reader.ReadBytes((int)Size);
+                data = reader.ReadBytes((int)size);
             }
             return data;
         }
@@ -650,31 +639,31 @@ namespace ArcCross
         /// <param name="regionIndex"></param>
         private void GetFileInformation(_sFileInformationV2 fileinfo, out long offset, out uint compSize, out uint decompSize, int regionIndex = 0)
         {
-            var fileindex = fileInfoIndex[fileinfo.IndexIndex];
+            var fileIndex = fileInfoIndex[fileinfo.IndexIndex];
 
             //redirect
             if ((fileinfo.Flags & 0x00000010) == 0x10)
             {
-                fileinfo = fileInfoV2[fileindex.FileInformationIndex];
+                fileinfo = fileInfoV2[fileIndex.FileInformationIndex];
             }
 
             var path = fileInfoPath[fileinfo.PathIndex];
-            var subindex = fileInfoSubIndex[fileinfo.SubIndexIndex];
+            var subIndex = fileInfoSubIndex[fileinfo.SubIndexIndex];
 
-            var subfile = subFiles[subindex.SubFileIndex];
-            var directoryOffset = directoryOffsets[subindex.DirectoryOffsetIndex];
+            var subFile = subFiles[subIndex.SubFileIndex];
+            var directoryOffset = directoryOffsets[subIndex.DirectoryOffsetIndex];
 
             //regional
             if ((fileinfo.Flags & 0x00008000) == 0x8000)
             {
-                subindex = fileInfoSubIndex[fileinfo.SubIndexIndex + 1 + regionIndex];
-                subfile = subFiles[subindex.SubFileIndex];
-                directoryOffset = directoryOffsets[subindex.DirectoryOffsetIndex];
+                subIndex = fileInfoSubIndex[fileinfo.SubIndexIndex + 1 + regionIndex];
+                subFile = subFiles[subIndex.SubFileIndex];
+                directoryOffset = directoryOffsets[subIndex.DirectoryOffsetIndex];
             }
 
-            offset = (header.FileDataOffset + directoryOffset.Offset + (subfile.Offset << 2));
-            compSize = subfile.CompSize;
-            decompSize = subfile.DecompSize;
+            offset = (header.FileDataOffset + directoryOffset.Offset + (subFile.Offset << 2));
+            compSize = subFile.CompSize;
+            decompSize = subFile.DecompSize;
         }
 
         public bool IsRedirected(string path)
@@ -699,24 +688,20 @@ namespace ArcCross
 
 
         /// <summary>
-        /// returns an unorganized list of the stream files in the arc
+        /// Returns an unorganized list of the stream files in the arc.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>An unorganized list of the stream files in the arc.</returns>
         public List<string> GetStreamFileList()
         {
             var files = new List<string>(streamNameToHash.Length);
 
-            foreach (var fileinfo in streamNameToHash)
+            foreach (var fileInfo in streamNameToHash)
             {
-                files.Add(HashDict.GetString(fileinfo.Hash, (int)(fileinfo.NameIndex&0xFF)));
+                files.Add(HashDict.GetString(fileInfo.Hash, (int)(fileInfo.NameIndex&0xFF)));
             }
 
             return files;
         }
-
-#endregion
-
-        #region ARC v1
 
         /// <summary>
         /// Parses filesystem from the 1.0.0 arc
@@ -727,24 +712,24 @@ namespace ArcCross
             using (ExtBinaryReader reader = new ExtBinaryReader(new MemoryStream(fileSystemTable)))
             {
                 reader.BaseStream.Position = 0;
-                var NodeHeader = reader.ReadType<_sFileSystemHeaderV1>();
+                var nodeHeader = reader.ReadType<_sFileSystemHeaderV1>();
 
                 reader.BaseStream.Seek(0x68, SeekOrigin.Begin);
 
                 // Hash Table
-                reader.BaseStream.Seek(0x8 * NodeHeader.Part1Count, SeekOrigin.Current);
+                reader.BaseStream.Seek(0x8 * nodeHeader.Part1Count, SeekOrigin.Current);
 
                 // Hash Table 2
                 System.Diagnostics.Debug.WriteLine("stream " + reader.BaseStream.Position.ToString("X"));
-                streamNameToHash = reader.ReadType<_sStreamNameToHash>(NodeHeader.Part1Count);
+                streamNameToHash = reader.ReadType<_sStreamNameToHash>(nodeHeader.Part1Count);
 
                 // Hash Table 3
                 System.Diagnostics.Debug.WriteLine("stream " + reader.BaseStream.Position.ToString("X"));
-                streamIndexToFile = reader.ReadType<_sStreamIndexToOffset>(NodeHeader.Part2Count);
+                streamIndexToFile = reader.ReadType<_sStreamIndexToOffset>(nodeHeader.Part2Count);
 
                 // stream offsets
                 System.Diagnostics.Debug.WriteLine("stream " + reader.BaseStream.Position.ToString("X"));
-                streamOffsets = reader.ReadType<_sStreamOffset>(NodeHeader.MusicFileCount);
+                streamOffsets = reader.ReadType<_sStreamOffset>(nodeHeader.MusicFileCount);
 
                 // Another Hash Table
                 System.Diagnostics.Debug.WriteLine("RegionalHashList " + reader.BaseStream.Position.ToString("X"));
@@ -753,22 +738,22 @@ namespace ArcCross
                 //folders
 
                 System.Diagnostics.Debug.WriteLine("FolderHashes " + reader.BaseStream.Position.ToString("X"));
-                directoryList = reader.ReadType<_sDirectoryList>(NodeHeader.FolderCount);
+                directoryList = reader.ReadType<_sDirectoryList>(nodeHeader.FolderCount);
 
                 //file offsets
 
                 System.Diagnostics.Debug.WriteLine("fileoffsets " + reader.BaseStream.Position.ToString("X"));
-                directoryOffsets = reader.ReadType<_sDirectoryOffset>(NodeHeader.FileCount1 + NodeHeader.FileCount2);
+                directoryOffsets = reader.ReadType<_sDirectoryOffset>(nodeHeader.FileCount1 + nodeHeader.FileCount2);
                 //DirectoryOffsets_2 = reader.ReadType<_sDirectoryOffsets>(R, NodeHeader.FileCount2);
 
                 System.Diagnostics.Debug.WriteLine("subfileoffset " + reader.BaseStream.Position.ToString("X"));
-                directoryChildHashGroup = reader.ReadType<_sHashIndexGroup>(NodeHeader.HashFolderCount);
+                directoryChildHashGroup = reader.ReadType<_sHashIndexGroup>(nodeHeader.HashFolderCount);
 
                 System.Diagnostics.Debug.WriteLine("subfileoffset " + reader.BaseStream.Position.ToString("X"));
-                fileInfoV1 = reader.ReadType<_sFileInformationV1>(NodeHeader.FileInformationCount);
+                fileInfoV1 = reader.ReadType<_sFileInformationV1>(nodeHeader.FileInformationCount);
 
                 System.Diagnostics.Debug.WriteLine("subfileoffset " + reader.BaseStream.Position.ToString("X"));
-                subFiles = reader.ReadType<_sSubFileInfo>(NodeHeader.SubFileCount + NodeHeader.SubFileCount2);
+                subFiles = reader.ReadType<_sSubFileInfo>(nodeHeader.SubFileCount + nodeHeader.SubFileCount2);
                 /*SubFileInformationStart = R.BaseStream.Position;
                 SubFileInformation_1 = reader.ReadType<_SubFileInfo>(R, NodeHeader.SubFileCount);
                 SubFileInformationStart2 = R.BaseStream.Position;
@@ -807,55 +792,53 @@ namespace ArcCross
         }
 
         /// <summary>
-        /// returns an unorganized list of the files in the arc excluding stream files
+        /// Returns an unorganized list of the files in the arc, excluding stream files.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>An unorganized list of the files in the arc, excluding stream files.</returns>
         public List<string> GetFileListV1()
         {
             var files = new List<string>(fileInfoV1.Length);
 
-            foreach (var fileinfo in fileInfoV1)
+            foreach (var fileInfo in fileInfoV1)
             {
-                string pathString = HashDict.GetString(fileinfo.Parent, (int)(fileinfo.Unk5 & 0xFF));
+                string pathString = HashDict.GetString(fileInfo.Parent, (int)(fileInfo.Unk5 & 0xFF));
                 if (pathString.StartsWith("0x"))
                     pathString += "/";
 
-                files.Add(pathString + HashDict.GetString(fileinfo.Hash2, (int)(fileinfo.Unk6 & 0xFF)));
+                files.Add(pathString + HashDict.GetString(fileInfo.Hash2, (int)(fileInfo.Unk6 & 0xFF)));
             }
 
             return files;
         }
 
-        private void GetFileInformation(_sFileInformationV1 fileinfo, out long offset, out uint compSize, out uint decompSize, int regionIndex = 0)
+        private void GetFileInformation(_sFileInformationV1 fileInfo, out long offset, out uint compSize, out uint decompSize, int regionIndex = 0)
         {
-            var subfile = subFiles[fileinfo.SubFile_Index];
-            var dirIndex = directoryList[fileinfo.DirectoryIndex >> 8].FullPathHashLengthAndIndex >> 8;
+            var subFile = subFiles[fileInfo.SubFile_Index];
+            var dirIndex = directoryList[fileInfo.DirectoryIndex >> 8].FullPathHashLengthAndIndex >> 8;
             var directoryOffset = directoryOffsets[dirIndex];
             
             //redirect
-            if ((fileinfo.Flags & 0x00300000) == 0x00300000)
+            if ((fileInfo.Flags & 0x00300000) == 0x00300000)
             {
-                GetFileInformation(fileInfoV1[subfile.Flags], out offset, out compSize, out decompSize, regionIndex);
+                GetFileInformation(fileInfoV1[subFile.Flags], out offset, out compSize, out decompSize, regionIndex);
                 return;
             }
 
             //regional
-            if (IsRegional(fileinfo))
+            if (IsRegional(fileInfo))
             {
-                subfile = subFiles[(fileinfo.FileTableFlag >> 8) + regionIndex];
+                subFile = subFiles[(fileInfo.FileTableFlag >> 8) + regionIndex];
                 directoryOffset = directoryOffsets[dirIndex + 1 + regionIndex];
             }
 
-            offset = (header.FileDataOffset + directoryOffset.Offset + (subfile.Offset << 2));
-            compSize = subfile.CompSize;
-            decompSize = subfile.DecompSize;
+            offset = (header.FileDataOffset + directoryOffset.Offset + (subFile.Offset << 2));
+            compSize = subFile.CompSize;
+            decompSize = subFile.DecompSize;
         }
 
-        private bool IsRegional(_sFileInformationV1 info)
+        private static bool IsRegional(_sFileInformationV1 info)
         {
             return (info.FileTableFlag >> 8) > 0;
         }
-
-        #endregion
     }
 }

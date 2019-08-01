@@ -1,7 +1,6 @@
-﻿using System;
-using ArcCross;
+﻿using CrossArc.GUI;
+using System;
 using System.Windows.Forms;
-using CrossArc.GUI;
 
 namespace CrossArc
 {

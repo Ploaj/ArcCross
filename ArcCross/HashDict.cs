@@ -7,15 +7,14 @@ namespace ArcCross
     {
         public static bool Initialized { get; internal set; } = false;
 
-        private static Dictionary<uint, List<string>> HashLookup = new Dictionary<uint, List<string>>();
+        private static readonly Dictionary<uint, List<string>> hashLookup = new Dictionary<uint, List<string>>();
 
         public static void Init()
         {
             if (!File.Exists("Hashes.txt"))
                 return;
 
-            var sw = new System.Diagnostics.Stopwatch();
-            sw.Start();
+            var sw = System.Diagnostics.Stopwatch.StartNew();
 
             /*var hash = CRC32.Crc32C(File.GetCreationTime("Hashes.txt").ToLongDateString());
 
@@ -30,26 +29,22 @@ namespace ArcCross
                 }
             }*/
 
-            ReadHashesFromTXT();
+            ReadHashesFromTxt();
             //SaveHashCache();
 
             Initialized = true;
 
-            System.Diagnostics.Debug.WriteLine(sw.Elapsed.Milliseconds);
+            System.Diagnostics.Debug.WriteLine($"Init Hashes: {sw.Elapsed.Milliseconds} ms");
         }
 
-        private static void ReadHashesFromTXT()
+        private static void ReadHashesFromTxt()
         {
-            using (StreamReader sr = new StreamReader("Hashes.txt"))
+            foreach (var line in File.ReadLines("Hashes.txt"))
             {
-                while (!sr.EndOfStream)
-                {
-                    string line = sr.ReadLine();
-                    uint Hash = CRC32.Crc32C(line);
-                    if (!HashLookup.ContainsKey(Hash))
-                        HashLookup.Add(Hash, new List<string>());
-                    HashLookup[Hash].Add(line);
-                }
+                uint hash = CRC32.Crc32C(line);
+                if (!hashLookup.ContainsKey(hash))
+                    hashLookup.Add(hash, new List<string>());
+                hashLookup[hash].Add(line);
             }
         }
 
@@ -58,8 +53,8 @@ namespace ArcCross
             using (BinaryWriter w = new BinaryWriter(new FileStream("Hashes.cache", FileMode.Create)))
             {
                 w.Write(CRC32.Crc32C(File.GetCreationTime("Hashes.txt").ToLongDateString()));
-                w.Write((int)HashLookup.Count);
-                foreach(var v in HashLookup)
+                w.Write((int)hashLookup.Count);
+                foreach(var v in hashLookup)
                 {
                     w.Write(v.Key);
                     w.Write(v.Value.Count);
@@ -76,7 +71,7 @@ namespace ArcCross
         {
             using (BinaryReader r = new BinaryReader(new FileStream("Hashes.cache", FileMode.Open)))
             {
-                HashLookup.Clear();
+                hashLookup.Clear();
                 if (createHash != r.ReadUInt32())
                     return false;
                 var count = r.ReadInt32();
@@ -87,7 +82,7 @@ namespace ArcCross
                     List<string> strings = new List<string>();
                     for (int j = 0; j < count2; j++)
                         strings.Add(new string(r.ReadChars(r.ReadInt16())));
-                    HashLookup.Add(hash, strings);
+                    hashLookup.Add(hash, strings);
                 }
             }
             return true;
@@ -95,31 +90,31 @@ namespace ArcCross
 
         public static void Unload()
         {
-            HashLookup.Clear();
+            hashLookup.Clear();
             Initialized = false;
         }
 
         /// <summary>
         /// Gets the strings with the associated hash and optional length
         /// </summary>
-        /// <param name="Hash"></param>
-        /// <param name="Length"></param>
+        /// <param name="hash"></param>
+        /// <param name="length"></param>
         /// <returns></returns>
-        public static string GetString(uint Hash, int Length = -1)
+        public static string GetString(uint hash, int length = -1)
         {
-            if (HashLookup.ContainsKey(Hash))
+            if (hashLookup.ContainsKey(hash))
             {
-                if (Length == -1)
-                    return HashLookup[Hash][0];
-                else
-                    foreach(var str in HashLookup[Hash])
-                    {
-                        if (str.Length == Length)
-                            return str;
-                    }
-                return HashLookup[Hash][0];
+                if (length == -1)
+                    return hashLookup[hash][0];
+
+                foreach(var str in hashLookup[hash])
+                {
+                    if (str.Length == length)
+                        return str;
+                }
+                return hashLookup[hash][0];
             }
-            return "0x" + Hash.ToString("X");
+            return "0x" + hash.ToString("X");
         }
 
     }
