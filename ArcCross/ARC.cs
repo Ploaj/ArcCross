@@ -818,9 +818,9 @@ namespace ArcCross
                 if (pathString.StartsWith("0x"))
                     pathString += "/";
 
-                string filename = HashDict.GetString(fileinfo.Hash2, (int)(fileinfo.Unk6 & 0xFF));
+                string filename = HashDict.GetString(fileInfo.Hash2, (int)(fileInfo.Unk6 & 0xFF));
                 if (filename.StartsWith("0x"))
-                    filename += HashDict.GetString(fileinfo.Extension);
+                    filename += HashDict.GetString(fileInfo.Extension);
 
                 files.Add(pathString + filename);
             }
@@ -837,7 +837,7 @@ namespace ArcCross
             //redirect
             if ((fileInfo.Flags & 0x00300000) == 0x00300000)
             {
-                GetFileInformation(fileInfoV1[subfile.Flags&0xFFFFFF], out offset, out compSize, out decompSize, regionIndex);
+                GetFileInformation(fileInfoV1[subFile.Flags&0xFFFFFF], out offset, out compSize, out decompSize, regionIndex);
                 return;
             }
 

@@ -176,12 +176,12 @@ namespace CrossArc.GUI
 
                     var s = System.Diagnostics.Stopwatch.StartNew();
 
-                    ArcFile.InitFileSystem(d.FileName);
+                    ArcFile = new Arc(d.FileName);
 
                     s.Restart();
 
                     InitFileSystem();
-                    Debug.WriteLine("init nodes: " + s.Elapsed.Milliseconds);
+                    System.Diagnostics.Debug.WriteLine("init nodes: " + s.Elapsed.Milliseconds);
 
                     Cursor.Current = Cursors.Arrow;
 
@@ -443,9 +443,9 @@ namespace CrossArc.GUI
                 if (d.ShowDialog() == DialogResult.OK)
                 {
                     if (xml)
-                        Root.Base.WriteToFileXML(d.FileName);
+                        rootNode.Base.WriteToFileXML(d.FileName);
                     else
-                        Root.Base.WriteToFileTXT(d.FileName);
+                        rootNode.Base.WriteToFileTXT(d.FileName);
                 }
             }
         }
