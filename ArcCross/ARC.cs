@@ -58,9 +58,15 @@ namespace ArcCross
         private Dictionary<uint, _sFileInformationV1> pathToFileInfoV1;
 
         /// <summary>
-        /// Initializes file system from file
+        /// Initializes a new instance of the <see cref="Arc"/> class and initializes the file system from the specified path.
         /// </summary>
-        public void InitFileSystem(string arcFilePath, bool readOnly = true)
+        /// <param name="arcFilePath"></param>
+        public Arc(string arcFilePath)
+        {
+            InitFileSystem(arcFilePath);
+        }
+
+        private void InitFileSystem(string arcFilePath)
         {
             filePaths.Clear();
 
