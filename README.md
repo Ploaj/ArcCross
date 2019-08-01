@@ -1,6 +1,11 @@
 # ArcCross
-A quick and dirty file extractor for Smash Ultimate's ARC file
+A file extractor for Smash Ultimate's ARC file.
 
-Run the exe, select your arc file, right click on nodes to export them.
+### Opening an ARC
+Click `File > Open ARC` and then select the appropriate `.arc` file. 
 
-* [Get the most up-to-date "Hashes.txt" from here for more filenames](https://github.com/ultimate-research/archive-hashes)
+### Extracting files
+Right click a file in the main window to extract an individual file. Right click a folder to extract all files in the given folder and all subfolders. Files will be extracted to the application directory, keeping the folder structure intact. 
+
+### Updating file hashes
+Click `Update Hashes` and the click ok. The latest hashes will be downloaded from the [github repo](https://github.com/ultimate-research/archive-hashes). Note that the current file size is around 32 MB.
