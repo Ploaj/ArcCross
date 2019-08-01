@@ -8,6 +8,7 @@ using System.Globalization;
 using System.Net;
 using System.Windows.Forms;
 using System.Configuration;
+using System.Threading.Tasks;
 
 namespace CrossArc.GUI
 {
@@ -31,7 +32,7 @@ namespace CrossArc.GUI
         }
 
         public static ARC ArcFile;
-    
+
         public static ContextMenu NodeContextMenu;
 
         private GuiNode Root;
@@ -55,7 +56,7 @@ namespace CrossArc.GUI
             treeView1.ImageList = new ImageList();
             treeView1.ImageList.Images.Add("folder", Properties.Resources.folder);
             treeView1.ImageList.Images.Add("file", Properties.Resources.file);
-            
+
             comboBox1.SelectedIndex = SelectedRegion;
 
             comboBox1.SelectedIndexChanged += (sender, args) =>
@@ -90,7 +91,7 @@ namespace CrossArc.GUI
 
         private void ExtractFile(object sender, EventArgs args)
         {
-            if(treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n && n.Base is FileNode file)
+            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n && n.Base is FileNode file)
             {
                 ProgressBar bar = new ProgressBar();
                 bar.Show();
@@ -172,7 +173,7 @@ namespace CrossArc.GUI
             {
                 d.FileName = "data.arc";
                 d.Filter += "Smash Ultimate ARC|*.arc";
-                if(d.ShowDialog() == DialogResult.OK)
+                if (d.ShowDialog() == DialogResult.OK)
                 {
                     Cursor.Current = Cursors.WaitCursor;
 
@@ -219,7 +220,7 @@ namespace CrossArc.GUI
 
         private void ProcessFile(FolderNode parent, string[] path, int index)
         {
-            if(path.Length - 1 == index)
+            if (path.Length - 1 == index)
             {
                 var FileNode = new FileNode(path[index]);
                 parent.AddChild(FileNode);
@@ -228,7 +229,7 @@ namespace CrossArc.GUI
 
             FolderNode node = null;
             string folderName = path[index];
-            foreach(var f in parent.Children)
+            foreach (var f in parent.Children)
             {
                 if (f.Text.Equals(folderName))
                 {
@@ -237,12 +238,12 @@ namespace CrossArc.GUI
                 }
             }
 
-            if(node == null)
+            if (node == null)
             {
                 node = new FolderNode(folderName);
                 parent.AddChild(node);
             }
-            
+
             ProcessFile(node, path, index + 1);
         }
 
@@ -255,42 +256,37 @@ namespace CrossArc.GUI
             }
         }
 
-        private bool DownloadingHashes = false;
-
-        private void updateHashesToolStripMenuItem_Click(object sender, EventArgs e)
+        private async void updateHashesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (DownloadingHashes)
-                return;
-            var dl = MessageBox.Show("", "Download Hashes?", MessageBoxButtons.YesNo);
+            var dl = MessageBox.Show("Download the latest archive hashes from github?", "Update Hashes.txt", MessageBoxButtons.YesNo);
 
-            if(dl == DialogResult.Yes)
-            using (var client = new WebClient())
+            // Disable the tool strip to prevent opening another arc before the file has finished downloading.
+            if (dl == DialogResult.Yes)
             {
-                Cursor.Current = Cursors.WaitCursor;
-                MessageBox.Show("Downloading Hashes please wait...");
-                DownloadingHashes = true;
-                DownloadHashes();
-                DownloadingHashes = false;
-                Cursor.Current = Cursors.Arrow;
+                menuStrip1.Enabled = false;
+
+                await DownloadHashesAsync();
+
+                menuStrip1.Enabled = true;
             }
         }
 
-        private void DownloadHashes()
+        private async Task DownloadHashesAsync()
         {
             using (var client = new WebClient())
             {
-                client.DownloadFile("https://github.com/ultimate-research/archive-hashes/raw/master/Hashes", "Hashes.txt");
+                await client.DownloadFileTaskAsync("https://github.com/ultimate-research/archive-hashes/raw/master/Hashes", "Hashes.txt");
             }
         }
 
 
-        private object lockTree = new object();
+        private readonly object lockTree = new object();
 
         private void searchBox_TextChanged(object sender, EventArgs e)
         {
             if (!ArcFile.Initialized || Root == null)
                 return;
-            lock(lockTree)
+            lock (lockTree)
             {
                 if (searchWorker != null)
                 {
@@ -323,7 +319,7 @@ namespace CrossArc.GUI
         {
             lock (lockTree)
             {
-                if(searchWorker != null)
+                if (searchWorker != null)
                 {
                     if (args.ProgressPercentage == 100)
                     {
@@ -335,7 +331,7 @@ namespace CrossArc.GUI
                 }
             }
         }
-        
+
         private void Search(object sender, DoWorkEventArgs e)
         {
             Queue<BaseNode> toSearch = new Queue<BaseNode>();
@@ -367,10 +363,10 @@ namespace CrossArc.GUI
                     }
                     if (s is FileNode file &&
                         key.Length >= 3 &&
-                        key.StartsWith("0x") && 
+                        key.StartsWith("0x") &&
                         long.TryParse(
                         key.Substring(2, key.Length - 2),
-                              NumberStyles.HexNumber, 
+                              NumberStyles.HexNumber,
                               CultureInfo.InvariantCulture
                               , out value)
                               && file.FileInformation.Offset == value)
@@ -385,10 +381,10 @@ namespace CrossArc.GUI
                 }
             }
 
-            if(!interrupted)
+            if (!interrupted)
                 searchWorker.ReportProgress(100, null);
         }
-        
+
         private void SearchCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             // add other code here
@@ -426,6 +422,6 @@ namespace CrossArc.GUI
             bar.Show();
             bar.Extract(toExport.ToArray());*/
         }
-        
+
     }
 }
