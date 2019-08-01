@@ -31,17 +31,13 @@ namespace CrossArc.GUI
 
         public static ContextMenu NodeContextMenu;
 
-        private GuiNode Root;
+        private GuiNode rootNode;
 
         private BackgroundWorker searchWorker;
-
-        public Dictionary<string, FileInformation> pathToFileInfomation = new Dictionary<string, FileInformation>();
 
         public MainForm()
         {
             InitializeComponent();
-
-            ArcFile = new Arc();
 
             treeView1.BeforeExpand += folderTree_BeforeExpand;
 
@@ -173,7 +169,7 @@ namespace CrossArc.GUI
 
                     var s = System.Diagnostics.Stopwatch.StartNew();
 
-                    ArcFile.InitFileSystem(d.FileName);
+                    ArcFile = new Arc(d.FileName);
 
                     System.Diagnostics.Debug.WriteLine("parse arc: " + s.Elapsed.Milliseconds);
 
@@ -211,8 +207,8 @@ namespace CrossArc.GUI
                 string[] path = file.Split('/');
                 ProcessFile(root, path, 0);
             }
-            Root = new GuiNode(root);
-            treeView1.Nodes.Add(Root);
+            rootNode = new GuiNode(root);
+            treeView1.Nodes.Add(rootNode);
         }
 
         private void ProcessFile(FolderNode parent, string[] path, int index)
@@ -281,7 +277,7 @@ namespace CrossArc.GUI
 
         private void searchBox_TextChanged(object sender, EventArgs e)
         {
-            if (!ArcFile.Initialized || Root == null)
+            if (!ArcFile.Initialized || rootNode == null)
                 return;
             lock (lockTree)
             {
@@ -296,7 +292,7 @@ namespace CrossArc.GUI
 
                 if (searchBox.Text == "")
                 {
-                    treeView1.Nodes.Add(Root);
+                    treeView1.Nodes.Add(rootNode);
                     searchLabel.Visible = false;
                 }
                 else
@@ -332,7 +328,7 @@ namespace CrossArc.GUI
         private void Search(object sender, DoWorkEventArgs e)
         {
             Queue<BaseNode> toSearch = new Queue<BaseNode>();
-            toSearch.Enqueue(Root.Base);
+            toSearch.Enqueue(rootNode.Base);
 
             bool interrupted = false;
 
