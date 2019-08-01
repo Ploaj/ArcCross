@@ -1,10 +1,6 @@
-﻿using System;
-using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
+﻿using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
-using System.Runtime.Serialization.Formatters.Binary;
 using Zstandard.Net;
 
 namespace ArcCross
@@ -19,11 +15,11 @@ namespace ArcCross
         /// <summary>
         /// Reads and decompresses ZSTD compressed data
         /// </summary>
-        /// <param name="size"></param>
+        /// <param name="sizeInBytes"></param>
         /// <returns></returns>
-        public byte[] ReadZstdCompressed(int size)
+        public byte[] ReadZstdCompressed(int sizeInBytes)
         {
-            byte[] compressed = ReadBytes(size);
+            byte[] compressed = ReadBytes(sizeInBytes);
             using (var memoryStream = new MemoryStream(compressed))
             using (var compressionStream = new ZstandardStream(memoryStream, CompressionMode.Decompress))
             using (var temp = new MemoryStream())
@@ -53,16 +49,15 @@ namespace ArcCross
         /// Reads an array of structs from the reader
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="reader"></param>
-        /// <param name="Size"></param>
+        /// <param name="count"></param>
         /// <returns></returns>
-        public T[] ReadType<T>(uint Size) where T : struct
+        public T[] ReadType<T>(uint count) where T : struct
         {
             int sizeOfT = Marshal.SizeOf(typeof(T));
 
-            var buffer = ReadBytes((int)(sizeOfT * Size));
+            var buffer = ReadBytes((int)(sizeOfT * count));
 
-            T[] result = new T[Size];
+            T[] result = new T[count];
 
             var pinnedHandle = GCHandle.Alloc(result, GCHandleType.Pinned);
             Marshal.Copy(buffer, 0, pinnedHandle.AddrOfPinnedObject(), buffer.Length);
@@ -75,7 +70,6 @@ namespace ArcCross
         /// Reads binary reader into struct
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="reader"></param>
         /// <returns></returns>
         public T ReadType<T>()
         {

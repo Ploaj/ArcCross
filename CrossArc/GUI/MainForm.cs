@@ -3,12 +3,11 @@ using CrossArc.GUI.Nodes;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
+using System.Configuration;
 using System.Globalization;
 using System.Net;
-using System.Windows.Forms;
-using System.Configuration;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace CrossArc.GUI
 {
@@ -18,10 +17,7 @@ namespace CrossArc.GUI
         public int Version;
         public static int SelectedRegion
         {
-            get
-            {
-                return int.Parse(ConfigurationManager.AppSettings["Region"]);
-            }
+            get => int.Parse(ConfigurationManager.AppSettings["Region"]);
             set
             {
                 var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
@@ -31,7 +27,7 @@ namespace CrossArc.GUI
             }
         }
 
-        public static ARC ArcFile;
+        public static Arc ArcFile;
 
         public static ContextMenu NodeContextMenu;
 
@@ -43,7 +39,7 @@ namespace CrossArc.GUI
         {
             InitializeComponent();
 
-            ArcFile = new ARC();
+            ArcFile = new Arc();
 
             treeView1.BeforeExpand += folderTree_BeforeExpand;
 
@@ -96,7 +92,7 @@ namespace CrossArc.GUI
             {
                 ProgressBar bar = new ProgressBar();
                 bar.Show();
-                bar.Extract(new FileNode[] { file });
+                bar.Extract(new[] { file });
             }
             if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
             {
@@ -110,15 +106,13 @@ namespace CrossArc.GUI
         {
             if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n && n.Base is FileNode file)
             {
-                ProgressBar bar = new ProgressBar();
-                bar.DecompressFiles = false;
+                ProgressBar bar = new ProgressBar {DecompressFiles = false};
                 bar.Show();
-                bar.Extract(new FileNode[] { file });
+                bar.Extract(new[] { file });
             }
             if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
             {
-                ProgressBar bar = new ProgressBar();
-                bar.DecompressFiles = false;
+                ProgressBar bar = new ProgressBar {DecompressFiles = false};
                 bar.Show();
                 bar.Extract(folder.GetAllFiles());
             }
@@ -131,7 +125,7 @@ namespace CrossArc.GUI
                 ProgressBar bar = new ProgressBar();
                 bar.UseOffsetName = true;
                 bar.Show();
-                bar.Extract(new FileNode[] { file });
+                bar.Extract(new[] { file });
             }
             if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
             {
@@ -150,7 +144,7 @@ namespace CrossArc.GUI
                 bar.UseOffsetName = true;
                 bar.DecompressFiles = false;
                 bar.Show();
-                bar.Extract(new FileNode[] { file });
+                bar.Extract(new[] { file });
             }
             if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
             {
@@ -180,14 +174,15 @@ namespace CrossArc.GUI
                     // hashes can probably be loaded asynchronously
                     Cursor.Current = Cursors.WaitCursor;
 
-                    Stopwatch s = new Stopwatch();
-                    s.Start();
+                    var s = System.Diagnostics.Stopwatch.StartNew();
+
                     ArcFile.InitFileSystem(d.FileName);
                     Debug.WriteLine("parse arc: " + s.Elapsed.Milliseconds);
+
                     s.Restart();
+
                     InitFileSystem();
                     Debug.WriteLine("init nodes: " + s.Elapsed.Milliseconds);
-                    s.Restart();
 
                     Cursor.Current = Cursors.Arrow;
 
@@ -269,7 +264,7 @@ namespace CrossArc.GUI
         {
             var dl = MessageBox.Show("Download the latest archive hashes from github?", "Update Hashes.txt", MessageBoxButtons.YesNo);
 
-            // Disable the tool strip to prevent opening another arc before the file has finished downloading.
+            // Disable the tool strip to prevent opening another arc or hashes before the file has finished downloading.
             if (dl == DialogResult.Yes)
             {
                 menuStrip1.Enabled = false;
@@ -314,8 +309,8 @@ namespace CrossArc.GUI
                 else
                 {
                     searchWorker = new BackgroundWorker();
-                    searchWorker.DoWork += new DoWorkEventHandler(Search);
-                    searchWorker.ProgressChanged += new ProgressChangedEventHandler(AddNode);
+                    searchWorker.DoWork += Search;
+                    searchWorker.ProgressChanged += AddNode;
                     searchWorker.WorkerSupportsCancellation = true;
                     searchWorker.WorkerReportsProgress = true;
                     searchWorker.RunWorkerAsync();
@@ -346,8 +341,6 @@ namespace CrossArc.GUI
             Queue<BaseNode> toSearch = new Queue<BaseNode>();
             toSearch.Enqueue(Root.Base);
 
-            long value;
-
             bool interrupted = false;
 
             var key = searchBox.Text;
@@ -370,15 +363,12 @@ namespace CrossArc.GUI
                     {
                         searchWorker.ReportProgress(0, s);
                     }
+
                     if (s is FileNode file &&
                         key.Length >= 3 &&
                         key.StartsWith("0x") &&
-                        long.TryParse(
-                        key.Substring(2, key.Length - 2),
-                              NumberStyles.HexNumber,
-                              CultureInfo.InvariantCulture
-                              , out value)
-                              && file.FileInformation.Offset == value)
+                        long.TryParse(key.Substring(2, key.Length - 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var value) &&
+                        file.FileInformation.Offset == value)
                     {
                         searchWorker.ReportProgress(0, s);
                     }

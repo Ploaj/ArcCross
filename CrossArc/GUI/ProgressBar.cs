@@ -8,6 +8,24 @@ namespace CrossArc.GUI
 {
     public partial class ProgressBar : Form
     {
+        private static readonly string[] regions =
+        {
+            "+jp_ja",
+            "+us_en",
+            "+us_fr",
+            "+us_es",
+            "+eu_en",
+            "+eu_fr",
+            "+eu_es",
+            "+eu_de",
+            "+eu_nl",
+            "+eu_it",
+            "+eu_ru",
+            "+kr_ko",
+            "+zh_cn",
+            "+zh_tw"
+        };
+
         public ProgressBar()
         {
             InitializeComponent();
@@ -25,8 +43,7 @@ namespace CrossArc.GUI
         public void Extract(FileNode[] toExtract)
         {
             this.toExtract = toExtract;
-            thread = new Thread(ExtractFileInformation);
-            thread.IsBackground = true;
+            thread = new Thread(ExtractFileInformation) { IsBackground = true };
             thread.Start();
         }
 
@@ -34,7 +51,7 @@ namespace CrossArc.GUI
         {
             if (InvokeRequired)
             {
-                this.BeginInvoke(new Action<int, string>(Update), new object[] { i, message });
+                BeginInvoke(new Action<int, string>(Update), i, message);
                 return;
             }
 
@@ -48,24 +65,6 @@ namespace CrossArc.GUI
                 SetMessage(message);
             }
         }
-
-        private static string[] Regions = new string[]
-{
-            "+jp_ja",
-"+us_en",
-"+us_fr",
-"+us_es",
-"+eu_en",
-"+eu_fr",
-"+eu_es",
-"+eu_de",
-"+eu_nl",
-"+eu_it",
-"+eu_ru",
-"+kr_ko",
-"+zh_cn",
-"+zh_tw"
-};
 
         private void ExtractFileInformation()
         {
@@ -83,7 +82,7 @@ namespace CrossArc.GUI
                 else
                 {
                     if (regional)
-                        path = path.Replace(Path.GetExtension(path), Regions[MainForm.SelectedRegion] + Path.GetExtension(path));
+                        path = path.Replace(Path.GetExtension(path), regions[MainForm.SelectedRegion] + Path.GetExtension(path));
 
                     SaveFile(path, file.ArcPath, MainForm.SelectedRegion);
                 }
@@ -92,27 +91,25 @@ namespace CrossArc.GUI
                 index++;
             }
             Update(100, "Done");
+            // TODO: Just don't use a progress bar for a small number of files to extract.
             Thread.Sleep(1000);
             Update(101, "Done");
         }
 
-        private void ExtractAllRegions(string path, string arcpath)
+        private void ExtractAllRegions(string path, string arcPath)
         {
-            for(int i = 0; i < 14; i++)
+            for (int i = 0; i < 14; i++)
             {
-                var newpath = path.Replace(Path.GetExtension(path), Regions[i] + Path.GetExtension(path));
+                var newPath = path.Replace(Path.GetExtension(path), regions[i] + Path.GetExtension(path));
 
-                SaveFile(newpath, arcpath, i);
+                SaveFile(newPath, arcPath, i);
             }
         }
 
         private void SaveFile(string filepath, string arcpath, int i)
         {
-            long offset;
-            uint c, d;
-            bool r;
-            MainForm.ArcFile.GetFileInformation(arcpath, out offset, out c, out d, out r, i);
-            
+            MainForm.ArcFile.GetFileInformation(arcpath, out long offset, out uint compSize, out uint decompSize, out bool regional, i);
+
             byte[] data;
 
             if (DecompressFiles)
@@ -129,9 +126,9 @@ namespace CrossArc.GUI
             File.WriteAllBytes(filepath, data);
         }
 
-        public void SetMessage(string Message)
+        public void SetMessage(string message)
         {
-            label1.Text = Message;
+            label1.Text = message;
         }
 
         public void SetPercent(int percent)
