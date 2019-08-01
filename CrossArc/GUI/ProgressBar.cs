@@ -121,7 +121,10 @@ namespace CrossArc.GUI
                 data = MainForm.ArcFile.GetFileCompressed(arcpath, i);
 
             if (UseOffsetName)
-                filepath = Path.GetDirectoryName(filepath) + "/0x" + offset.ToString("X");
+            {
+                var extension = Path.GetExtension(filepath);
+                filepath = filepath.Replace(extension, "_0x" + offset.ToString("X8") + extension);
+            }
 
             File.WriteAllBytes(filepath, data);
         }

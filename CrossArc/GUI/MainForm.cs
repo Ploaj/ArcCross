@@ -38,9 +38,7 @@ namespace CrossArc.GUI
         private GuiNode Root;
 
         private BackgroundWorker searchWorker;
-
-        public Dictionary<string, FileInformation> pathToFileInfomation = new Dictionary<string, FileInformation>();
-
+        
         public MainForm()
         {
             InitializeComponent();
@@ -56,6 +54,9 @@ namespace CrossArc.GUI
             treeView1.ImageList = new ImageList();
             treeView1.ImageList.Images.Add("folder", Properties.Resources.folder);
             treeView1.ImageList.Images.Add("file", Properties.Resources.file);
+
+            exportFileSystemToXMLToolStripMenuItem.Enabled = false;
+            exportFileSystemToTXTToolStripMenuItem.Enabled = false;
 
             comboBox1.SelectedIndex = SelectedRegion;
 
@@ -175,25 +176,33 @@ namespace CrossArc.GUI
                 d.Filter += "Smash Ultimate ARC|*.arc";
                 if (d.ShowDialog() == DialogResult.OK)
                 {
+                    // loading the arc freezes everything for now
+                    // hashes can probably be loaded asynchronously
                     Cursor.Current = Cursors.WaitCursor;
 
                     Stopwatch s = new Stopwatch();
                     s.Start();
                     ArcFile.InitFileSystem(d.FileName);
-                    System.Diagnostics.Debug.WriteLine("parse arc: " + s.Elapsed.Milliseconds);
+                    Debug.WriteLine("parse arc: " + s.Elapsed.Milliseconds);
                     s.Restart();
                     InitFileSystem();
-                    System.Diagnostics.Debug.WriteLine("init nodes: " + s.Elapsed.Milliseconds);
+                    Debug.WriteLine("init nodes: " + s.Elapsed.Milliseconds);
                     s.Restart();
 
                     Cursor.Current = Cursors.Arrow;
+
+                    // update arc version label
                     label1.Text = "Arc Version: " + ArcFile.Version.ToString("X");
 
+                    // enable controls that can only be accessed when the arc is loaded
                     updateHashesToolStripMenuItem.Enabled = false;
+                    exportFileSystemToXMLToolStripMenuItem.Enabled = true;
+                    exportFileSystemToTXTToolStripMenuItem.Enabled = true;
 
                     Version = ArcFile.Version;
                     FilePath = d.FileName;
 
+                    // explicitly unload hashe dictionary as it is no longer needed
                     HashDict.Unload();
                 }
             }
@@ -423,5 +432,33 @@ namespace CrossArc.GUI
             bar.Extract(toExport.ToArray());*/
         }
 
+        private void exportFileSystemToXMLToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ExportFS(true);
+        }
+
+        private void exportFileSystemToTXTToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ExportFS(false);
+        }
+
+        private void ExportFS(bool xml)
+        {
+            using (SaveFileDialog d = new SaveFileDialog())
+            {
+                if (xml)
+                    d.Filter = "XML (*.xml)|*.xml";
+                else
+                    d.Filter = "TXT (*.txt)|*.txt";
+
+                if (d.ShowDialog() == DialogResult.OK)
+                {
+                    if (xml)
+                        Root.Base.WriteToFileXML(d.FileName);
+                    else
+                        Root.Base.WriteToFileTXT(d.FileName);
+                }
+            }
+        }
     }
 }

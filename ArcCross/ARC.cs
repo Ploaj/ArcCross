@@ -67,17 +67,20 @@ namespace ArcCross
         /// </summary>
         public void InitFileSystem(string arcFilePath, bool readOnly = true)
         {
+            filePaths.Clear();
+
             using (ExtBinaryReader reader = new ExtBinaryReader(new FileStream(arcFilePath, FileMode.Open)))
             {
                 Initialized = Init(reader);
                 filePath = arcFilePath;
             }
+
+            pathToFileInfoV1 = new Dictionary<uint, _sFileInformationV1>();
             pathToFileInfo = new Dictionary<uint, _sFileInformationV2>();
 
             var paths = GetFileList();
             if (Version == 0x00010000)
             {
-                pathToFileInfoV1 = new Dictionary<uint, _sFileInformationV1>();
                 for (int i = 0; i < paths.Count; i++)
                 {
                     uint crc = CRC32.Crc32C(paths[i]);
@@ -87,7 +90,6 @@ namespace ArcCross
             }
             else
             {
-                pathToFileInfo = new Dictionary<uint, _sFileInformationV2>();
                 for (int i = 0; i < paths.Count; i++)
                 {
                     uint crc = CRC32.Crc32C(paths[i]);
@@ -125,6 +127,7 @@ namespace ArcCross
                 ReadFileSystem(ReadCompressedTable(reader));
             }
 
+            //don't read yet since rebuild doesn't work correctly anyway
             //reader.BaseStream.Seek(header.FileSystemSearchOffset, SeekOrigin.Begin);
             //ReadSearchTable(ReadCompressedTable(reader));
 
@@ -518,7 +521,11 @@ namespace ArcCross
                     if (pathString.StartsWith("0x"))
                         pathString += "/";
 
-                    filePaths.Add(pathString + HashDict.GetString(path.FileName, (int)(path.Unk6 & 0xFF)));
+                    string filename = HashDict.GetString(path.FileName, (int)(path.Unk6 & 0xFF));
+                    if (filename.StartsWith("0x"))
+                        filename += HashDict.GetString(path.Extension);
+
+                    filePaths.Add(pathString + filename);
                 }
             }
 
@@ -820,7 +827,11 @@ namespace ArcCross
                 if (pathString.StartsWith("0x"))
                     pathString += "/";
 
-                files.Add(pathString + HashDict.GetString(fileinfo.Hash2, (int)(fileinfo.Unk6 & 0xFF)));
+                string filename = HashDict.GetString(fileinfo.Hash2, (int)(fileinfo.Unk6 & 0xFF));
+                if (filename.StartsWith("0x"))
+                    filename += HashDict.GetString(fileinfo.Extension);
+
+                files.Add(pathString + filename);
             }
 
             return files;
@@ -835,7 +846,7 @@ namespace ArcCross
             //redirect
             if ((fileinfo.Flags & 0x00300000) == 0x00300000)
             {
-                GetFileInformation(fileInfoV1[subfile.Flags], out offset, out compSize, out decompSize, regionIndex);
+                GetFileInformation(fileInfoV1[subfile.Flags&0xFFFFFF], out offset, out compSize, out decompSize, regionIndex);
                 return;
             }
 
