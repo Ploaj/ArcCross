@@ -596,8 +596,9 @@ namespace ArcCross
             decompSize = 0;
             regional = false;
             uint crc = CRC32.Crc32C(filepath);
-            if (!pathToFileInfo.ContainsKey(crc) && !pathToFileInfoV1.ContainsKey(crc))
-            {
+            if ((Version != 0x00010000 && !pathToFileInfo.ContainsKey(crc)) ||
+                (Version == 0x00010000 && !pathToFileInfoV1.ContainsKey(crc)))
+            {   //
                 // check for stream file
 
                 foreach (var fileinfo in streamNameToHash)
