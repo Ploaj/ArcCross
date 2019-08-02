@@ -206,17 +206,20 @@ namespace CrossArc.GUI
         {
             treeView1.Nodes.Clear();
             FolderNode root = new FolderNode("root");
-            foreach (var file in ArcFile.GetFileList())
+
+            foreach (var file in ArcFile.FilePaths)
             {
                 string[] path = file.Split('/');
                 ProcessFile(root, path, 0);
 
             }
-            foreach (var file in ArcFile.GetStreamFileList())
+
+            foreach (var file in ArcFile.StreamFilePaths)
             {
                 string[] path = file.Split('/');
                 ProcessFile(root, path, 0);
             }
+
             rootNode = new GuiNode(root);
             treeView1.Nodes.Add(rootNode);
         }
@@ -225,8 +228,8 @@ namespace CrossArc.GUI
         {
             if (path.Length - 1 == index)
             {
-                var FileNode = new FileNode(path[index]);
-                parent.AddChild(FileNode);
+                var fileNode = new FileNode(path[index]);
+                parent.AddChild(fileNode);
                 return;
             }
 

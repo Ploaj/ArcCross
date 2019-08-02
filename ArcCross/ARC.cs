@@ -13,8 +13,9 @@ namespace ArcCross
 
         private string filePath;
 
-        // Optimize repeated calls to GetFileList
-        private List<string> filePaths = new List<string>();
+        // Get only to ensure the file paths are only initialized once.
+        public IList<string> FilePaths { get; }
+        public IList<string> StreamFilePaths { get; }
 
         private const ulong Magic = 0xABCDEF9876543210;
 
@@ -54,8 +55,8 @@ namespace ArcCross
         // handling
         public bool Initialized { get; internal set; }
 
-        private Dictionary<uint, _sFileInformationV2> pathToFileInfo;
-        private Dictionary<uint, _sFileInformationV1> pathToFileInfoV1;
+        private readonly Dictionary<uint, _sFileInformationV2> pathToFileInfo = new Dictionary<uint, _sFileInformationV2>();
+        private readonly Dictionary<uint, _sFileInformationV1> pathToFileInfoV1 = new Dictionary<uint, _sFileInformationV1>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Arc"/> class and initializes the file system from the specified path.
@@ -64,36 +65,39 @@ namespace ArcCross
         public Arc(string arcFilePath)
         {
             InitFileSystem(arcFilePath);
+
+            FilePaths = GetFileList();
+            StreamFilePaths = GetStreamFileList();
+
+            InitializePathToFileInfo();
         }
 
         private void InitFileSystem(string arcFilePath)
         {
-            filePaths.Clear();
+            filePath = arcFilePath;
 
             using (ExtBinaryReader reader = new ExtBinaryReader(new FileStream(arcFilePath, FileMode.Open)))
             {
                 Initialized = Init(reader);
-                filePath = arcFilePath;
             }
+        }
 
-            pathToFileInfoV1 = new Dictionary<uint, _sFileInformationV1>();
-            pathToFileInfo = new Dictionary<uint, _sFileInformationV2>();
-
-            var paths = GetFileList();
+        private void InitializePathToFileInfo()
+        {
             if (Version == 0x00010000)
             {
-                for (int i = 0; i < paths.Count; i++)
+                for (int i = 0; i < FilePaths.Count; i++)
                 {
-                    uint crc = (uint)paths[i].GetHashCode();// CRC32.Crc32C(paths[i]);
+                    uint crc = (uint) FilePaths[i].GetHashCode(); // CRC32.Crc32C(paths[i]);
                     if (!pathToFileInfoV1.ContainsKey(crc))
                         pathToFileInfoV1.Add(crc, fileInfoV1[i]);
                 }
             }
             else
             {
-                for (int i = 0; i < paths.Count; i++)
+                for (int i = 0; i < FilePaths.Count; i++)
                 {
-                    uint crc = (uint)paths[i].GetHashCode();
+                    uint crc = (uint) FilePaths[i].GetHashCode();
                     if (!pathToFileInfo.ContainsKey(crc))
                         pathToFileInfo.Add(crc, fileInfoV2[i]);
                 }
@@ -494,38 +498,32 @@ namespace ArcCross
             }
         }
 
-        /// <summary>
-        /// returns an unorganized list of the files in the arc excluding stream files
-        /// </summary>
-        /// <returns></returns>
-        public List<string> GetFileList()
+
+        private List<string> GetFileList()
         {
-            // Optimize repeated calls.
-            if (filePaths.Count > 0)
-                return filePaths;
-
             if (Version == 0x00010000)
-            {
-                filePaths = GetFileListV1();
-            }
+                return GetFileListV1();
             else
+                return GetFileListV2();
+        }
+
+        private List<string> GetFileListV2()
+        {
+            var filePaths = new List<string>(fileInfoV2.Length);
+
+            foreach (var fileInfo in fileInfoV2)
             {
-                filePaths = new List<string>(fileInfoV2.Length);
+                var path = fileInfoPath[fileInfo.PathIndex];
 
-                foreach (var fileInfo in fileInfoV2)
-                {
-                    var path = fileInfoPath[fileInfo.PathIndex];
+                string pathString = HashDict.GetString(path.Parent, (int) (path.Unk5 & 0xFF));
+                if (pathString.StartsWith("0x"))
+                    pathString += "/";
 
-                    string pathString = HashDict.GetString(path.Parent, (int)(path.Unk5 & 0xFF));
-                    if (pathString.StartsWith("0x"))
-                        pathString += "/";
+                string filename = HashDict.GetString(path.FileName, (int) (path.Unk6 & 0xFF));
+                if (filename.StartsWith("0x"))
+                    filename += HashDict.GetString(path.Extension);
 
-                    string filename = HashDict.GetString(path.FileName, (int)(path.Unk6 & 0xFF));
-                    if (filename.StartsWith("0x"))
-                        filename += HashDict.GetString(path.Extension);
-
-                    filePaths.Add(pathString + filename);
-                }
+                filePaths.Add(pathString + filename);
             }
 
             return filePaths;
@@ -700,11 +698,7 @@ namespace ArcCross
         }
 
 
-        /// <summary>
-        /// Returns an unorganized list of the stream files in the arc.
-        /// </summary>
-        /// <returns>An unorganized list of the stream files in the arc.</returns>
-        public List<string> GetStreamFileList()
+        private List<string> GetStreamFileList()
         {
             var files = new List<string>(streamNameToHash.Length);
 
