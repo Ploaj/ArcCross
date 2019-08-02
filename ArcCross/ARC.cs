@@ -84,7 +84,7 @@ namespace ArcCross
             {
                 for (int i = 0; i < paths.Count; i++)
                 {
-                    uint crc = CRC32.Crc32C(paths[i]);
+                    uint crc = (uint)paths[i].GetHashCode();// CRC32.Crc32C(paths[i]);
                     if (!pathToFileInfoV1.ContainsKey(crc))
                         pathToFileInfoV1.Add(crc, fileInfoV1[i]);
                 }
@@ -93,7 +93,7 @@ namespace ArcCross
             {
                 for (int i = 0; i < paths.Count; i++)
                 {
-                    uint crc = CRC32.Crc32C(paths[i]);
+                    uint crc = (uint)paths[i].GetHashCode();
                     if (!pathToFileInfo.ContainsKey(crc))
                         pathToFileInfo.Add(crc, fileInfoV2[i]);
                 }
@@ -597,7 +597,7 @@ namespace ArcCross
             compSize = 0;
             decompSize = 0;
             regional = false;
-            uint crc = CRC32.Crc32C(filepath);
+            uint crc = (uint)filepath.GetHashCode();// CRC32.Crc32C(filepath);
             if ((Version != 0x00010000 && !pathToFileInfo.ContainsKey(crc)) ||
                 (Version == 0x00010000 && !pathToFileInfoV1.ContainsKey(crc)))
             {   //
@@ -681,7 +681,7 @@ namespace ArcCross
 
         public bool IsRedirected(string path)
         {
-            uint crc = CRC32.Crc32C(path);
+            uint crc = (uint)path.GetHashCode();// CRC32.Crc32C(path);
             if (pathToFileInfoV1 != null && pathToFileInfoV1.ContainsKey(crc))
                 return ((pathToFileInfoV1[crc].Flags & 0x00300000) == 0x00300000);
             if (pathToFileInfo != null && pathToFileInfo.ContainsKey(crc))
@@ -691,7 +691,7 @@ namespace ArcCross
 
         public bool IsRegional(string path)
         {
-            uint crc = CRC32.Crc32C(path);
+            uint crc = (uint)path.GetHashCode();// CRC32.Crc32C(path);
             if (pathToFileInfoV1 != null && pathToFileInfoV1.ContainsKey(crc))
                 return ((pathToFileInfoV1[crc].FileTableFlag >> 8) > 0);
             if (pathToFileInfo != null && pathToFileInfo.ContainsKey(crc))
