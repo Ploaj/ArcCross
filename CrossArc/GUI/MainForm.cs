@@ -15,6 +15,7 @@ namespace CrossArc.GUI
     {
         public string FilePath;
         public int Version;
+
         public static int SelectedRegion
         {
             get => int.Parse(ConfigurationManager.AppSettings["Region"]);
@@ -34,6 +35,8 @@ namespace CrossArc.GUI
         private GuiNode rootNode;
 
         private BackgroundWorker searchWorker;
+
+        private readonly object lockTree = new object();
 
         public Dictionary<string, FileInformation> pathToFileInfomation = new Dictionary<string, FileInformation>();
 
@@ -106,13 +109,13 @@ namespace CrossArc.GUI
         {
             if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n && n.Base is FileNode file)
             {
-                ProgressBar bar = new ProgressBar {DecompressFiles = false};
+                ProgressBar bar = new ProgressBar { DecompressFiles = false };
                 bar.Show();
                 bar.Extract(new[] { file });
             }
             if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
             {
-                ProgressBar bar = new ProgressBar {DecompressFiles = false};
+                ProgressBar bar = new ProgressBar { DecompressFiles = false };
                 bar.Show();
                 bar.Extract(folder.GetAllFiles());
             }
@@ -164,18 +167,23 @@ namespace CrossArc.GUI
 
         private void openARCToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            var initHashes = Task.Run(() =>
+            {
+                if (!HashDict.Initialized)
+                    HashDict.Init();
+            });
+
             using (OpenFileDialog d = new OpenFileDialog())
             {
                 d.FileName = "data.arc";
                 d.Filter += "Smash Ultimate ARC|*.arc";
                 if (d.ShowDialog() == DialogResult.OK)
                 {
-                    // loading the arc freezes everything for now
-                    // hashes can probably be loaded asynchronously
                     Cursor.Current = Cursors.WaitCursor;
 
                     var s = System.Diagnostics.Stopwatch.StartNew();
 
+                    initHashes.Wait();
                     ArcFile = new Arc(d.FileName);
 
                     s.Restart();
@@ -195,9 +203,6 @@ namespace CrossArc.GUI
 
                     Version = ArcFile.Version;
                     FilePath = d.FileName;
-
-                    // explicitly unload hashe dictionary as it is no longer needed
-                    HashDict.Unload();
                 }
             }
         }
@@ -266,12 +271,18 @@ namespace CrossArc.GUI
         {
             var dl = MessageBox.Show("Download the latest archive hashes from github?", "Update Hashes.txt", MessageBoxButtons.YesNo);
 
-            // Disable the tool strip to prevent opening another arc or hashes before the file has finished downloading.
             if (dl == DialogResult.Yes)
             {
+                // Disable the tool strip to prevent opening another arc or hashes before the file has finished downloading.
                 menuStrip1.Enabled = false;
 
                 await DownloadHashesAsync();
+                await Task.Run(() =>
+                {
+                    // Refresh the hash dictionary.
+                    HashDict.Unload();
+                    HashDict.Init();
+                });
 
                 menuStrip1.Enabled = true;
             }
@@ -279,14 +290,12 @@ namespace CrossArc.GUI
 
         private async Task DownloadHashesAsync()
         {
+
             using (var client = new WebClient())
             {
                 await client.DownloadFileTaskAsync("https://github.com/ultimate-research/archive-hashes/raw/master/Hashes", "Hashes.txt");
             }
         }
-
-
-        private readonly object lockTree = new object();
 
         private void searchBox_TextChanged(object sender, EventArgs e)
         {
