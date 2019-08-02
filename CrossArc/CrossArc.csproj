@@ -77,12 +77,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ArcCross\ArcCross.csproj">
-      <Project>{bec3b127-267c-4fd5-8fdd-75880b1927ad}</Project>
-      <Name>ArcCross</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="Resources\file.png" />
   </ItemGroup>
   <ItemGroup>
@@ -99,6 +93,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\folder.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ArcCross\ArcCross.csproj">
+      <Project>{0444a8c3-9657-40ad-bb02-38b18a99ded4}</Project>
+      <Name>ArcCross</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
