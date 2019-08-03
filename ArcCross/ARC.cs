@@ -57,6 +57,7 @@ namespace ArcCross
 
         private readonly Dictionary<uint, _sFileInformationV2> pathToFileInfo = new Dictionary<uint, _sFileInformationV2>();
         private readonly Dictionary<uint, _sFileInformationV1> pathToFileInfoV1 = new Dictionary<uint, _sFileInformationV1>();
+        private readonly Dictionary<uint, _sStreamNameToHash> pathToStreamInfo = new Dictionary<uint, _sStreamNameToHash>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Arc"/> class and initializes the file system from the specified path.
@@ -84,6 +85,9 @@ namespace ArcCross
 
         private void InitializePathToFileInfo()
         {
+            foreach (var v in streamNameToHash)
+                pathToStreamInfo.Add(v.Hash, v);
+            
             if (Version == 0x00010000)
             {
                 for (int i = 0; i < FilePaths.Count; i++)
@@ -600,33 +604,32 @@ namespace ArcCross
                 (Version == 0x00010000 && !pathToFileInfoV1.ContainsKey(crc)))
             {   //
                 // check for stream file
-
-                foreach (var fileinfo in streamNameToHash)
+                var strcrc = CRC32.Crc32C(filepath);
+                if(pathToStreamInfo.ContainsKey(strcrc))
                 {
-                    if (fileinfo.Hash == crc)
-                    {
-                        if (fileinfo.Flags == 1 || fileinfo.Flags == 2)
-                        {
-                            if (fileinfo.Flags == 2 && regionIndex > 5)
-                                regionIndex = 0;
+                    var fileinfo = pathToStreamInfo[strcrc];
 
-                            var streamindex = streamIndexToFile[(fileinfo.NameIndex >> 8) + regionIndex].FileIndex;
-                            var offsetinfo = streamOffsets[streamindex];
-                            offset = offsetinfo.Offset;
-                            compSize = (uint)offsetinfo.Size;
-                            decompSize = (uint)offsetinfo.Size;
-                            regional = true;
-                        }
-                        else
-                        {
-                            var streamindex = streamIndexToFile[fileinfo.NameIndex >> 8].FileIndex;
-                            var offsetinfo = streamOffsets[streamindex];
-                            offset = offsetinfo.Offset;
-                            compSize = (uint)offsetinfo.Size;
-                            decompSize = (uint)offsetinfo.Size;
-                        }
-                        return;
+                    if (fileinfo.Flags == 1 || fileinfo.Flags == 2)
+                    {
+                        if (fileinfo.Flags == 2 && regionIndex > 5)
+                            regionIndex = 0;
+
+                        var streamindex = streamIndexToFile[(fileinfo.NameIndex >> 8) + regionIndex].FileIndex;
+                        var offsetinfo = streamOffsets[streamindex];
+                        offset = offsetinfo.Offset;
+                        compSize = (uint)offsetinfo.Size;
+                        decompSize = (uint)offsetinfo.Size;
+                        regional = true;
                     }
+                    else
+                    {
+                        var streamindex = streamIndexToFile[fileinfo.NameIndex >> 8].FileIndex;
+                        var offsetinfo = streamOffsets[streamindex];
+                        offset = offsetinfo.Offset;
+                        compSize = (uint)offsetinfo.Size;
+                        decompSize = (uint)offsetinfo.Size;
+                    }
+                    return;
                 }
 
                 return;
