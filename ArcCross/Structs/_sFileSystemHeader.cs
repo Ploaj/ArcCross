@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 namespace ArcCross
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    [Serializable]
     public struct _sFileSystemHeader
     {
         public uint TableFileSize;
@@ -31,7 +30,6 @@ namespace ArcCross
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    [Serializable]
     public struct _sStreamHeader
     {
         public uint UnkCount;
@@ -41,7 +39,6 @@ namespace ArcCross
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    [Serializable]
     public struct _sStreamUnk
     {
         public uint Hash;

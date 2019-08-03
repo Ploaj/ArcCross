@@ -2,7 +2,6 @@
 
 namespace ArcCross
 {
-    [System.Serializable]
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct _sCompressedTableHeader
     {

@@ -1,10 +1,8 @@
-﻿using System;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace ArcCross
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    [Serializable]
     public struct _sSubFileInfo
     {
         public uint Offset;

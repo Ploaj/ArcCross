@@ -3,7 +3,6 @@
 namespace ArcCross
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    [System.Serializable]
     public struct _sSearchHashHeader
     {
         public ulong SectionSize;
@@ -13,7 +12,6 @@ namespace ArcCross
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    [System.Serializable]
     public struct _sHashIndexGroup
     {
         public uint Hash;
@@ -21,7 +19,6 @@ namespace ArcCross
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    [System.Serializable]
     public struct _sHashGroup
     {
         public uint FilePathHash;

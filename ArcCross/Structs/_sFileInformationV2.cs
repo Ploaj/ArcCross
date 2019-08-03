@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 namespace ArcCross
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    [Serializable]
     public struct _sFileInformationPath
     {
         public uint Path;
@@ -19,7 +18,6 @@ namespace ArcCross
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    [Serializable]
     public struct _sFileInformationUnknownTable
     {
         public uint SomeIndex;
@@ -27,7 +25,6 @@ namespace ArcCross
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    [System.Serializable]
     public struct _sFileInformationIndex
     {
         public uint DirectoryOffsetIndex;
@@ -35,7 +32,6 @@ namespace ArcCross
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    [System.Serializable]
     public struct _sFileInformationSubIndex
     {
         public uint DirectoryOffsetIndex;
@@ -44,7 +40,6 @@ namespace ArcCross
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    [System.Serializable]
     public struct _sFileInformationV2
     {
         public uint PathIndex; 

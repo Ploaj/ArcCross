@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 namespace ArcCross
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    [Serializable]
     public struct _sDirectoryList
     {
         public uint FullPathHash;
@@ -29,7 +28,6 @@ namespace ArcCross
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    [Serializable]
     public struct _sDirectoryOffset
     {
         public long Offset;

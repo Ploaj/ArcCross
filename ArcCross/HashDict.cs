@@ -52,7 +52,7 @@ namespace ArcCross
         {
             using (BinaryWriter w = new BinaryWriter(new FileStream("Hashes.cache", FileMode.Create)))
             {
-                w.Write(CRC32.Crc32C(File.GetCreationTime("Hashes.txt").ToLongDateString()));
+                //w.Write(CRC32.Crc32C(File.GetCreationTime("Hashes.txt").ToLongDateString()));
                 w.Write((int)hashLookup.Count);
                 foreach(var v in hashLookup)
                 {
@@ -72,8 +72,8 @@ namespace ArcCross
             using (BinaryReader r = new BinaryReader(new FileStream("Hashes.cache", FileMode.Open)))
             {
                 hashLookup.Clear();
-                if (createHash != r.ReadUInt32())
-                    return false;
+                //if (createHash != r.ReadUInt32())
+                 //   return false;
                 var count = r.ReadInt32();
                 for(int i = 0; i < count; i++)
                 {
