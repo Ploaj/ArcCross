@@ -34,4 +34,6 @@ after_build:
   - 7z a "ArcCross.zip" "%APPVEYOR_BUILD_FOLDER%\CrossArc\bin\Release\Hashes.txt"
   - 7z a "ArcCross.zip" "%APPVEYOR_BUILD_FOLDER%\CrossArc\bin\Release\netstandard.dll"
   - 7z a "ArcCross.zip" "%APPVEYOR_BUILD_FOLDER%\CrossArc\bin\Release\ArcCross.dll"
+  - 7z a "ArcCross.zip" "%APPVEYOR_BUILD_FOLDER%\CrossArc\bin\Release\Zstandard.Net.dll"
+  - 7z a "ArcCross.zip" "%APPVEYOR_BUILD_FOLDER%\CrossArc\bin\Release\System.Buffers.dll"
   - appveyor PushArtifact "ArcCross.zip"
