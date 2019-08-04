@@ -301,49 +301,45 @@ namespace CrossArc.GUI
         {
             if (!ArcFile.Initialized || rootNode == null)
                 return;
-            lock (lockTree)
+
+            // Cancel previous search
+            if (searchWorker != null)
             {
-                if (searchWorker != null)
-                {
-                    searchWorker.CancelAsync();
-                    searchWorker.Dispose();
-                    searchWorker = null;
-                }
+                searchWorker.CancelAsync();
+                searchWorker.Dispose();
+                searchWorker = null;
+            }
+            treeView1.Nodes.Clear();
 
-                treeView1.Nodes.Clear();
-
-                if (searchBox.Text == "")
-                {
-                    treeView1.Nodes.Add(rootNode);
-                    searchLabel.Visible = false;
-                }
-                else
-                {
-                    searchWorker = new BackgroundWorker();
-                    searchWorker.DoWork += Search;
-                    searchWorker.ProgressChanged += AddNode;
-                    searchWorker.WorkerSupportsCancellation = true;
-                    searchWorker.WorkerReportsProgress = true;
-                    searchWorker.RunWorkerAsync();
-                    searchLabel.Visible = true;
-                }
+            if (searchBox.Text == "")
+            {
+                treeView1.Nodes.Add(rootNode);
+                searchLabel.Visible = false;
+            }
+            else
+            {
+                // Start new search
+                searchWorker = new BackgroundWorker();
+                searchWorker.DoWork += Search;
+                searchWorker.ProgressChanged += AddNode;
+                searchWorker.WorkerSupportsCancellation = true;
+                searchWorker.WorkerReportsProgress = true;
+                searchWorker.RunWorkerAsync();
+                searchLabel.Visible = true;
             }
         }
 
         private void AddNode(object sender, ProgressChangedEventArgs args)
         {
-            lock (lockTree)
+            if (searchWorker != null)
             {
-                if (searchWorker != null)
+                if (args.ProgressPercentage == 100)
                 {
-                    if (args.ProgressPercentage == 100)
-                    {
-                        System.Diagnostics.Debug.WriteLine("Done Searching");
-                        searchLabel.Visible = false;
-                    }
-                    else
-                        treeView1.Nodes.Add(new GuiNode((BaseNode)args.UserState));
+                    System.Diagnostics.Debug.WriteLine("Done Searching");
+                    searchLabel.Visible = false;
                 }
+                else
+                    treeView1.Nodes.Add(new GuiNode((BaseNode)args.UserState));
             }
         }
 
