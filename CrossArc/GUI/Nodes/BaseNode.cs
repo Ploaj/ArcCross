@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using System.Text;
-using System.Windows.Forms;
 using System.Xml;
 
 namespace CrossArc.GUI.Nodes
@@ -56,22 +54,44 @@ namespace CrossArc.GUI.Nodes
         {
             if (this is FileNode file)
             {
+                var info = file.FileInformation;
+
                 writer.WriteStartElement("file");
                 writer.WriteAttributeString("name", Text);
-                var info = file.FileInformation;
                 writer.WriteAttributeString("offset", info.ArcOffset);
 
                 if(info.CompressedSize == info.DecompressedSize)
                 {
                     writer.WriteAttributeString("size", info.CompressedSize.ToString("X"));
-                    //writer.WriteAttributeString("sizeInBytes", info.CompressedSize.ToString());
                 }
                 else
                 {
                     writer.WriteAttributeString("compsize", info.CompressedSize.ToString("X"));
                     writer.WriteAttributeString("decompsize", info.DecompressedSize.ToString("X"));
-                    //writer.WriteAttributeString("compsizeInBytes", info.CompressedSize.ToString());
-                    //writer.WriteAttributeString("decompsizeInBytes", info.DecompressedSize.ToString());
+                }
+
+                if (info.region)
+                {
+                    for(int i = 0; i < 14; i++)
+                    {
+                        info = new FileInformation(file.ArcPath, i);
+
+                        writer.WriteStartElement("regional_offset");
+                        writer.WriteAttributeString("tag", ProgressBar.RegionTags[i]);
+                        writer.WriteAttributeString("offset", info.ArcOffset);
+
+                        if (info.CompressedSize == info.DecompressedSize)
+                        {
+                            writer.WriteAttributeString("size", info.CompressedSize.ToString("X"));
+                        }
+                        else
+                        {
+                            writer.WriteAttributeString("compsize", info.CompressedSize.ToString("X"));
+                            writer.WriteAttributeString("decompsize", info.DecompressedSize.ToString("X"));
+                        }
+
+                        writer.WriteEndElement();
+                    }
                 }
 
                 writer.WriteEndElement();
@@ -101,13 +121,26 @@ namespace CrossArc.GUI.Nodes
             if (this is FileNode file)
             {
                 var info = file.FileInformation;
-                if (info.CompressedSize == info.DecompressedSize)
+                if(info.region)
                 {
-                    writer.WriteLine($"{FullPath} | Offset: {info.ArcOffset} Size: 0x{info.CompressedSize.ToString("X")}");
+                    for(int i = 0; i < 14; i++)
+                    {
+                        info = new FileInformation(file.ArcPath, i);
+
+                        if (info.CompressedSize == info.DecompressedSize)
+                            writer.WriteLine($"{ProgressBar.GetRegionalPath(FullPath)} | Offset: {info.ArcOffset} Size: {info.CompressedSize.ToString("X")}");
+                        else
+                            writer.WriteLine($"{ProgressBar.GetRegionalPath(FullPath)} | Offset: {info.ArcOffset} CompSize: {info.CompressedSize.ToString("X")} DecompSize: {info.DecompressedSize.ToString("X")}");
+
+                    }
                 }
                 else
                 {
-                    writer.WriteLine($"{FullPath} | Offset: {info.ArcOffset} CompSize: 0x{info.CompressedSize.ToString("X")} DecompSize: 0x{info.DecompressedSize.ToString("X")}");
+                    if (info.CompressedSize == info.DecompressedSize)
+                        writer.WriteLine($"{FullPath} | Offset: {info.ArcOffset} Size: {info.CompressedSize.ToString("X")}");
+                    else
+                        writer.WriteLine($"{FullPath} | Offset: {info.ArcOffset} CompSize: 0x{info.CompressedSize.ToString("X")} DecompSize: 0x{info.DecompressedSize.ToString("X")}");
+
                 }
             }
             if (GetType() == typeof(FolderNode))

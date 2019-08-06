@@ -8,7 +8,7 @@ namespace CrossArc.GUI
 {
     public partial class ProgressBar : Form
     {
-        private static readonly string[] regions =
+        public static readonly string[] RegionTags =
         {
             "+jp_ja",
             "+us_en",
@@ -82,7 +82,7 @@ namespace CrossArc.GUI
                 else
                 {
                     if (regional)
-                        path = path.Replace(Path.GetExtension(path), regions[MainForm.SelectedRegion] + Path.GetExtension(path));
+                        path = path.Replace(Path.GetExtension(path), RegionTags[MainForm.SelectedRegion] + Path.GetExtension(path));
 
                     SaveFile(path, file.ArcPath, MainForm.SelectedRegion);
                 }
@@ -96,11 +96,16 @@ namespace CrossArc.GUI
             Update(101, "Done");
         }
 
+        public static string GetRegionalPath(string path)
+        {
+            return path.Replace(Path.GetExtension(path), RegionTags[MainForm.SelectedRegion] + Path.GetExtension(path));
+        }
+
         private void ExtractAllRegions(string path, string arcPath)
         {
             for (int i = 0; i < 14; i++)
             {
-                var newPath = path.Replace(Path.GetExtension(path), regions[i] + Path.GetExtension(path));
+                var newPath = path.Replace(Path.GetExtension(path), RegionTags[i] + Path.GetExtension(path));
 
                 SaveFile(newPath, arcPath, i);
             }
