@@ -31,6 +31,8 @@
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openARCToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.exportFileSystemToXMLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.exportFileSystemToTXTToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.updateHashesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.treeView1 = new System.Windows.Forms.TreeView();
             this.propertyGrid1 = new System.Windows.Forms.PropertyGrid();
@@ -40,8 +42,6 @@
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.searchLabel = new System.Windows.Forms.Label();
-            this.exportFileSystemToXMLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.exportFileSystemToTXTToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -72,6 +72,20 @@
             this.openARCToolStripMenuItem.Size = new System.Drawing.Size(209, 22);
             this.openARCToolStripMenuItem.Text = "Open ARC";
             this.openARCToolStripMenuItem.Click += new System.EventHandler(this.openARCToolStripMenuItem_Click);
+            // 
+            // exportFileSystemToXMLToolStripMenuItem
+            // 
+            this.exportFileSystemToXMLToolStripMenuItem.Name = "exportFileSystemToXMLToolStripMenuItem";
+            this.exportFileSystemToXMLToolStripMenuItem.Size = new System.Drawing.Size(209, 22);
+            this.exportFileSystemToXMLToolStripMenuItem.Text = "Export FileSystem To XML";
+            this.exportFileSystemToXMLToolStripMenuItem.Click += new System.EventHandler(this.exportFileSystemToXMLToolStripMenuItem_Click);
+            // 
+            // exportFileSystemToTXTToolStripMenuItem
+            // 
+            this.exportFileSystemToTXTToolStripMenuItem.Name = "exportFileSystemToTXTToolStripMenuItem";
+            this.exportFileSystemToTXTToolStripMenuItem.Size = new System.Drawing.Size(209, 22);
+            this.exportFileSystemToTXTToolStripMenuItem.Text = "Export FileSystem To CSV";
+            this.exportFileSystemToTXTToolStripMenuItem.Click += new System.EventHandler(this.exportFileSystemToCsvToolStripMenuItem_Click);
             // 
             // updateHashesToolStripMenuItem
             // 
@@ -175,20 +189,6 @@
             this.searchLabel.TabIndex = 8;
             this.searchLabel.Text = "searching...";
             this.searchLabel.Visible = false;
-            // 
-            // exportFileSystemToXMLToolStripMenuItem
-            // 
-            this.exportFileSystemToXMLToolStripMenuItem.Name = "exportFileSystemToXMLToolStripMenuItem";
-            this.exportFileSystemToXMLToolStripMenuItem.Size = new System.Drawing.Size(209, 22);
-            this.exportFileSystemToXMLToolStripMenuItem.Text = "Export FileSystem To XML";
-            this.exportFileSystemToXMLToolStripMenuItem.Click += new System.EventHandler(this.exportFileSystemToXMLToolStripMenuItem_Click);
-            // 
-            // exportFileSystemToTXTToolStripMenuItem
-            // 
-            this.exportFileSystemToTXTToolStripMenuItem.Name = "exportFileSystemToTXTToolStripMenuItem";
-            this.exportFileSystemToTXTToolStripMenuItem.Size = new System.Drawing.Size(209, 22);
-            this.exportFileSystemToTXTToolStripMenuItem.Text = "Export FileSystem To TXT";
-            this.exportFileSystemToTXTToolStripMenuItem.Click += new System.EventHandler(this.exportFileSystemToTXTToolStripMenuItem_Click);
             // 
             // MainForm
             // 

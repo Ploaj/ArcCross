@@ -431,29 +431,36 @@ namespace CrossArc.GUI
 
         private void exportFileSystemToXMLToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ExportFS(true);
+            ExportFileSystemXml();
         }
 
-        private void exportFileSystemToTXTToolStripMenuItem_Click(object sender, EventArgs e)
+        private void exportFileSystemToCsvToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ExportFS(false);
+            ExportFileSystemCsv();
         }
 
-        private void ExportFS(bool xml)
+        private void ExportFileSystemCsv()
         {
             using (SaveFileDialog d = new SaveFileDialog())
             {
-                if (xml)
-                    d.Filter = "XML (*.xml)|*.xml";
-                else
-                    d.Filter = "TXT (*.txt)|*.txt";
+                d.Filter = "CSV (*.csv)|*.csv";
 
                 if (d.ShowDialog() == DialogResult.OK)
                 {
-                    if (xml)
-                        rootNode.Base.WriteToFileXML(d.FileName);
-                    else
-                        rootNode.Base.WriteToFileTXT(d.FileName);
+                    rootNode.Base.WriteToFileCsv(d.FileName);
+                }
+            }
+        }
+
+        private void ExportFileSystemXml()
+        {
+            using (SaveFileDialog d = new SaveFileDialog())
+            {
+                d.Filter = "XML (*.xml)|*.xml";
+
+                if (d.ShowDialog() == DialogResult.OK)
+                {
+                    rootNode.Base.WriteToFileXML(d.FileName);
                 }
             }
         }
