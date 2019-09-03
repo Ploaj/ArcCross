@@ -55,9 +55,9 @@ namespace ArcCross
         // handling
         public bool Initialized { get; internal set; }
 
-        private readonly Dictionary<uint, _sFileInformationV2> pathToFileInfo = new Dictionary<uint, _sFileInformationV2>();
-        private readonly Dictionary<uint, _sFileInformationV1> pathToFileInfoV1 = new Dictionary<uint, _sFileInformationV1>();
-        private readonly Dictionary<uint, _sStreamNameToHash> pathToStreamInfo = new Dictionary<uint, _sStreamNameToHash>();
+        private readonly Dictionary<string, _sFileInformationV2> pathToFileInfo = new Dictionary<string, _sFileInformationV2>();
+        private readonly Dictionary<string, _sFileInformationV1> pathToFileInfoV1 = new Dictionary<string, _sFileInformationV1>();
+        private readonly Dictionary<uint, _sStreamNameToHash> pathCrc32ToStreamInfo = new Dictionary<uint, _sStreamNameToHash>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Arc"/> class and initializes the file system from the specified path.
@@ -86,24 +86,22 @@ namespace ArcCross
         private void InitializePathToFileInfo()
         {
             foreach (var v in streamNameToHash)
-                pathToStreamInfo.Add(v.Hash, v);
+                pathCrc32ToStreamInfo.Add(v.Hash, v);
             
             if (Version == 0x00010000)
             {
                 for (int i = 0; i < FilePaths.Count; i++)
                 {
-                    uint crc = (uint) FilePaths[i].GetHashCode(); // CRC32.Crc32C(paths[i]);
-                    if (!pathToFileInfoV1.ContainsKey(crc))
-                        pathToFileInfoV1.Add(crc, fileInfoV1[i]);
+                    if (!pathToFileInfoV1.ContainsKey(FilePaths[i]))
+                        pathToFileInfoV1.Add(FilePaths[i], fileInfoV1[i]);
                 }
             }
             else
             {
                 for (int i = 0; i < FilePaths.Count; i++)
                 {
-                    uint crc = (uint) FilePaths[i].GetHashCode();
-                    if (!pathToFileInfo.ContainsKey(crc))
-                        pathToFileInfo.Add(crc, fileInfoV2[i]);
+                    if (!pathToFileInfo.ContainsKey(FilePaths[i]))
+                        pathToFileInfo.Add(FilePaths[i], fileInfoV2[i]);
                 }
             }
         }
@@ -599,15 +597,15 @@ namespace ArcCross
             compSize = 0;
             decompSize = 0;
             regional = false;
-            uint crc = (uint)filepath.GetHashCode();// CRC32.Crc32C(filepath);
-            if ((Version != 0x00010000 && !pathToFileInfo.ContainsKey(crc)) ||
-                (Version == 0x00010000 && !pathToFileInfoV1.ContainsKey(crc)))
+
+            if ((Version != 0x00010000 && !pathToFileInfo.ContainsKey(filepath)) ||
+                (Version == 0x00010000 && !pathToFileInfoV1.ContainsKey(filepath)))
             {   //
                 // check for stream file
                 var strcrc = CRC32.Crc32C(filepath);
-                if(pathToStreamInfo.ContainsKey(strcrc))
+                if(pathCrc32ToStreamInfo.ContainsKey(strcrc))
                 {
-                    var fileinfo = pathToStreamInfo[strcrc];
+                    var fileinfo = pathCrc32ToStreamInfo[strcrc];
 
                     if (fileinfo.Flags == 1 || fileinfo.Flags == 2)
                     {
@@ -638,9 +636,9 @@ namespace ArcCross
                 regional = true;
 
             if(Version == 0x00010000)
-                GetFileInformation(pathToFileInfoV1[crc], out offset, out compSize, out decompSize, regionIndex);
+                GetFileInformation(pathToFileInfoV1[filepath], out offset, out compSize, out decompSize, regionIndex);
             else
-                GetFileInformation(pathToFileInfo[crc], out offset, out compSize, out decompSize, regionIndex);
+                GetFileInformation(pathToFileInfo[filepath], out offset, out compSize, out decompSize, regionIndex);
         }
 
         /// <summary>
@@ -682,24 +680,21 @@ namespace ArcCross
 
         public bool IsRedirected(string path)
         {
-            uint crc = (uint)path.GetHashCode();// CRC32.Crc32C(path);
-            if (pathToFileInfoV1 != null && pathToFileInfoV1.ContainsKey(crc))
-                return ((pathToFileInfoV1[crc].Flags & 0x00300000) == 0x00300000);
-            if (pathToFileInfo != null && pathToFileInfo.ContainsKey(crc))
-                return (pathToFileInfo[crc].Flags & 0x00000010) == 0x10;
+            if (pathToFileInfoV1 != null && pathToFileInfoV1.ContainsKey(path))
+                return ((pathToFileInfoV1[path].Flags & 0x00300000) == 0x00300000);
+            if (pathToFileInfo != null && pathToFileInfo.ContainsKey(path))
+                return (pathToFileInfo[path].Flags & 0x00000010) == 0x10;
             return false;
         }
 
         public bool IsRegional(string path)
         {
-            uint crc = (uint)path.GetHashCode();// CRC32.Crc32C(path);
-            if (pathToFileInfoV1 != null && pathToFileInfoV1.ContainsKey(crc))
-                return ((pathToFileInfoV1[crc].FileTableFlag >> 8) > 0);
-            if (pathToFileInfo != null && pathToFileInfo.ContainsKey(crc))
-                return ((pathToFileInfo[crc].Flags & 0x00008000) == 0x8000);
+            if (pathToFileInfoV1 != null && pathToFileInfoV1.ContainsKey(path))
+                return ((pathToFileInfoV1[path].FileTableFlag >> 8) > 0);
+            if (pathToFileInfo != null && pathToFileInfo.ContainsKey(path))
+                return ((pathToFileInfo[path].Flags & 0x00008000) == 0x8000);
             return false;
         }
-
 
         private List<string> GetStreamFileList()
         {
