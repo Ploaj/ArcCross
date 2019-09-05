@@ -153,16 +153,20 @@ namespace ArcCross
 
                 uint extraFolder = 0;
                 uint extraCount = 0;
+                uint extraCount2 = 0;
+                uint extraSubCount = 0;
 
-                if(fileSystemTable.Length >= 0x2992DD4)
+                if (fileSystemTable.Length >= 0x2992DD4)
                 {
                     // Version 3+
                     Version = reader.ReadInt32();
 
                     extraFolder = reader.ReadUInt32(); 
-                    extraCount = reader.ReadUInt32(); 
+                    extraCount = reader.ReadUInt32();
 
-                    reader.ReadBytes(0x10);  // some extra thing :thinking
+                    reader.ReadBytes(8);  // some extra thing :thinking
+                    extraCount2 = reader.ReadUInt32();
+                    extraSubCount = reader.ReadUInt32();
                 }
                 else
                 {
@@ -216,11 +220,10 @@ namespace ArcCross
                 Console.WriteLine(reader.BaseStream.Position.ToString("X"));
                 fileInfoV2 = reader.ReadType<_sFileInformationV2>(fsHeader.FileInformationCount + fsHeader.SubFileCount2 + extraCount);
                 
-                fileInfoSubIndex = reader.ReadType<_sFileInformationSubIndex>(fsHeader.FileInformationSubIndexCount + fsHeader.SubFileCount2 + extraCount);
+                fileInfoSubIndex = reader.ReadType<_sFileInformationSubIndex>(fsHeader.FileInformationSubIndexCount + fsHeader.SubFileCount2 + extraCount2);
                 
-                subFiles = reader.ReadType<_sSubFileInfo>(fsHeader.SubFileCount + fsHeader.SubFileCount2);
-
-                Console.WriteLine(reader.BaseStream.Position.ToString("X"));
+                subFiles = reader.ReadType<_sSubFileInfo>(fsHeader.SubFileCount + fsHeader.SubFileCount2 + extraSubCount);
+                Console.WriteLine("End:" + reader.BaseStream.Position.ToString("X"));
                 //uint max = 0;
                 /*using (StreamWriter writer = new StreamWriter(new FileStream("FS1.txt", FileMode.Create)))
                     for (int i = 0; i < (int)FSHeader.FileInformationCount; i++)
