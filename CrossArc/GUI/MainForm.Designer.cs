@@ -70,6 +70,7 @@
             // openARCToolStripMenuItem
             // 
             this.openARCToolStripMenuItem.Name = "openARCToolStripMenuItem";
+            this.openARCToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
             this.openARCToolStripMenuItem.Size = new System.Drawing.Size(209, 22);
             this.openARCToolStripMenuItem.Text = "Open ARC";
             this.openARCToolStripMenuItem.Click += new System.EventHandler(this.openARCToolStripMenuItem_Click);
