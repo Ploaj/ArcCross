@@ -329,6 +329,11 @@ namespace CrossArc.GUI
             }
         }
 
+        private void searchRegexCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+
+        }
+
         private void AddNode(object sender, ProgressChangedEventArgs args)
         {
             if (searchWorker != null)

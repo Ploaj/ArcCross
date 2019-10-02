@@ -43,6 +43,7 @@
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.searchLabel = new System.Windows.Forms.Label();
+            this.searchRegexCheckBox = new System.Windows.Forms.CheckBox();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -159,7 +160,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.searchBox.Location = new System.Drawing.Point(63, 50);
             this.searchBox.Name = "searchBox";
-            this.searchBox.Size = new System.Drawing.Size(370, 20);
+            this.searchBox.Size = new System.Drawing.Size(307, 20);
             this.searchBox.TabIndex = 5;
             this.searchBox.TextChanged += new System.EventHandler(this.searchBox_TextChanged);
             // 
@@ -184,6 +185,7 @@
             // 
             // searchLabel
             // 
+            this.searchLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.searchLabel.AutoSize = true;
             this.searchLabel.Location = new System.Drawing.Point(368, 34);
             this.searchLabel.Name = "searchLabel";
@@ -192,11 +194,24 @@
             this.searchLabel.Text = "searching...";
             this.searchLabel.Visible = false;
             // 
+            // searchRegexCheckBox
+            // 
+            this.searchRegexCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.searchRegexCheckBox.AutoSize = true;
+            this.searchRegexCheckBox.Location = new System.Drawing.Point(376, 52);
+            this.searchRegexCheckBox.Name = "searchRegexCheckBox";
+            this.searchRegexCheckBox.Size = new System.Drawing.Size(57, 17);
+            this.searchRegexCheckBox.TabIndex = 9;
+            this.searchRegexCheckBox.Text = "Regex";
+            this.searchRegexCheckBox.UseVisualStyleBackColor = true;
+            this.searchRegexCheckBox.CheckedChanged += new System.EventHandler(this.searchRegexCheckBox_CheckedChanged);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(704, 441);
+            this.Controls.Add(this.searchRegexCheckBox);
             this.Controls.Add(this.searchLabel);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.label2);
@@ -233,5 +248,6 @@
         private System.Windows.Forms.Label searchLabel;
         private System.Windows.Forms.ToolStripMenuItem exportFileSystemToXMLToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem exportFileSystemToTXTToolStripMenuItem;
+        private System.Windows.Forms.CheckBox searchRegexCheckBox;
     }
 }
