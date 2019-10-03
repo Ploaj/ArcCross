@@ -9,7 +9,7 @@ A file extractor for Smash Ultimate's ARC file.
 [![Build status](https://ci.appveyor.com/api/projects/status/drd2v75fe4mqm4po?svg=true)](https://ci.appveyor.com/project/Ploaj/arccross) 
 
 ### Opening an ARC
-Click `File > Open ARC` and then select the appropriate `.arc` file. 
+Click `File > Open ARC` and then select the `.arc` file which you wish to unpack
 
 ### Extracting files
 Right click a file in the main window to extract an individual file. Right click a folder to extract all files in the given folder and all subfolders. Files will be extracted to the application directory, keeping the folder structure intact. 
