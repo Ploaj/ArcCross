@@ -359,7 +359,7 @@ namespace CrossArc.GUI
 
         private void SetRegexPattern()
         {
-            regexPattern = new Regex("^"
+            regexPattern = new Regex("^root/"
                 + Regex.Escape(searchBox.Text)
                 .Replace(@"\?", ".")
                 .Replace(@"\*", ".*")
