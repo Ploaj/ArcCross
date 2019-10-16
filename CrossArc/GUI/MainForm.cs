@@ -392,7 +392,12 @@ namespace CrossArc.GUI
                     searchLabel.Visible = false;
                 }
                 else
+                {
+                    // TODO: a potentially better way to implement search results is to
+                    // apply a filter over the nodes. However, this requires changing
+                    // GUINode.cs, since by default it displays every subnode
                     treeView1.Nodes.Add(new GuiNode((BaseNode)args.UserState));
+                }
             }
         }
 
@@ -421,6 +426,10 @@ namespace CrossArc.GUI
 
                     var s = toSearch.Dequeue();
 
+                    // TODO: (Optimization idea)
+                    // if you do a search like "fighter/*.prc", the program should know that
+                    // it is impossible to find such a path in "sound", or "effect", etc.
+                    // It may be necessary to remove regex implementation for it.
                     if (searchCallback(key, s))
                     {
                         searchWorker.ReportProgress(0, s);
