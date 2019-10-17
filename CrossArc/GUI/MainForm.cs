@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Configuration;
 using System.Globalization;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -35,6 +36,12 @@ namespace CrossArc.GUI
         private GuiNode rootNode;
 
         private BackgroundWorker searchWorker;
+
+        private Regex regexPattern = null;
+
+        private bool searchOffset = false;
+
+        private Func<string, BaseNode, bool> searchCallback { get; set; }
 
         private readonly object lockTree = new object();
 
@@ -87,6 +94,13 @@ namespace CrossArc.GUI
                 item.Click += ExtractFileCompOffset;
                 NodeContextMenu.MenuItems.Add(item);
             }
+
+            searchOffset = searchOffsetCheckBox.Checked;
+
+            if (searchOffset)
+                searchCallback = SearchCheckOffset;
+            else
+                searchCallback = SearchCheckPath;
         }
 
         private void ExtractFile(object sender, EventArgs args)
@@ -299,7 +313,7 @@ namespace CrossArc.GUI
 
         private void searchBox_TextChanged(object sender, EventArgs e)
         {
-            if (!ArcFile.Initialized || rootNode == null)
+            if (ArcFile == null || !ArcFile.Initialized || rootNode == null)
                 return;
 
             // Cancel previous search
@@ -311,14 +325,10 @@ namespace CrossArc.GUI
             }
             treeView1.Nodes.Clear();
 
-            if (searchBox.Text == "")
+            if (searchBox.Text != "")
             {
-                treeView1.Nodes.Add(rootNode);
-                searchLabel.Visible = false;
-            }
-            else
-            {
-                // Start new search
+                SetRegexPattern();
+
                 searchWorker = new BackgroundWorker();
                 searchWorker.DoWork += Search;
                 searchWorker.ProgressChanged += AddNode;
@@ -327,6 +337,49 @@ namespace CrossArc.GUI
                 searchWorker.RunWorkerAsync();
                 searchLabel.Visible = true;
             }
+            else
+            {
+                treeView1.Nodes.Add(rootNode);
+                searchLabel.Visible = false;
+            }
+        }
+
+        private void searchOffsetCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            searchOffset = searchOffsetCheckBox.Checked;
+
+            if (searchOffset)
+                searchCallback = SearchCheckOffset;
+            else
+                searchCallback = SearchCheckPath;
+
+            //trigger a re-search
+            searchBox_TextChanged(null, null);
+        }
+
+        private void SetRegexPattern()
+        {
+            regexPattern = new Regex("^root/"
+                + Regex.Escape(searchBox.Text)
+                .Replace(@"\?", ".")
+                .Replace(@"\*", ".*")
+                + "$",
+                RegexOptions.Compiled | RegexOptions.IgnoreCase
+            );
+        }
+
+        private bool SearchCheckPath(string path, BaseNode node)
+        {
+            return regexPattern.IsMatch(node.FullPath);
+        }
+
+        private bool SearchCheckOffset(string offsetStr, BaseNode node)
+        {
+            return node is FileNode file &&
+                offsetStr.Length >= 3 &&
+                offsetStr.StartsWith("0x") &&
+                long.TryParse(offsetStr.Remove(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var value) &&
+                file.FileInformation.Offset == value;
         }
 
         private void AddNode(object sender, ProgressChangedEventArgs args)
@@ -339,7 +392,12 @@ namespace CrossArc.GUI
                     searchLabel.Visible = false;
                 }
                 else
+                {
+                    // TODO: a potentially better way to implement search results is to
+                    // apply a filter over the nodes. However, this requires changing
+                    // GUINode.cs, since by default it displays every subnode
                     treeView1.Nodes.Add(new GuiNode((BaseNode)args.UserState));
+                }
             }
         }
 
@@ -358,7 +416,9 @@ namespace CrossArc.GUI
             {
                 lock (lockTree)
                 {
-                    if (searchBox != null && key != searchBox.Text || searchWorker == null || searchWorker.CancellationPending)
+                    if (searchBox != null && key != searchBox.Text
+                        || searchWorker == null
+                        || searchWorker.CancellationPending)
                     {
                         interrupted = true;
                         break;
@@ -366,23 +426,20 @@ namespace CrossArc.GUI
 
                     var s = toSearch.Dequeue();
 
-                    if (s.Text.Contains(key))
+                    // TODO: (Optimization idea)
+                    // if you do a search like "fighter/*.prc", the program should know that
+                    // it is impossible to find such a path in "sound", or "effect", etc.
+                    // It may be necessary to remove regex implementation for it.
+                    if (searchCallback(key, s))
                     {
                         searchWorker.ReportProgress(0, s);
                     }
-
-                    if (s is FileNode file &&
-                        key.Length >= 3 &&
-                        key.StartsWith("0x") &&
-                        long.TryParse(key.Substring(2, key.Length - 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var value) &&
-                        file.FileInformation.Offset == value)
+                    else
                     {
-                        searchWorker.ReportProgress(0, s);
-                    }
-
-                    foreach (var b in s.SubNodes)
-                    {
-                        toSearch.Enqueue(b);
+                        foreach (var b in s.SubNodes)
+                        {
+                            toSearch.Enqueue(b);
+                        }
                     }
                 }
             }
