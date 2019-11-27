@@ -91,7 +91,8 @@ namespace CrossArc.GUI
                 index++;
             }
             Update(100, "Done");
-            // TODO: Just don't use a progress bar for a small number of files to extract.
+
+            // Make sure the completion message stays on screen long enough to be read.
             Thread.Sleep(1000);
             Update(101, "Done");
         }
