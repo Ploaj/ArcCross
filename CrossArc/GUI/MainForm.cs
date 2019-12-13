@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
 using System.Globalization;
+using System.IO;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -195,15 +196,22 @@ namespace CrossArc.GUI
                 {
                     Cursor.Current = Cursors.WaitCursor;
 
-                    var s = System.Diagnostics.Stopwatch.StartNew();
 
                     initHashes.Wait();
+
+                    var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
                     ArcFile = new Arc(d.FileName);
 
-                    s.Restart();
+                    stopwatch.Stop();
+                    System.Diagnostics.Debug.WriteLine("Create ARC: " + stopwatch.ElapsedMilliseconds);
+
+                    stopwatch.Restart();
 
                     InitFileSystem();
-                    System.Diagnostics.Debug.WriteLine("init nodes: " + s.Elapsed.Milliseconds);
+
+                    stopwatch.Stop();
+                    System.Diagnostics.Debug.WriteLine("Init file system: " + stopwatch.ElapsedMilliseconds);
 
                     Cursor.Current = Cursors.Arrow;
 
@@ -230,7 +238,6 @@ namespace CrossArc.GUI
             {
                 string[] path = file.Split('/');
                 ProcessFile(root, path, 0);
-
             }
 
             foreach (var file in ArcFile.StreamFilePaths)
@@ -243,33 +250,43 @@ namespace CrossArc.GUI
             treeView1.Nodes.Add(rootNode);
         }
 
-        private void ProcessFile(FolderNode parent, string[] path, int index)
+        private static void ProcessFile(FolderNode parent, string[] path, int index)
         {
+            string currentPath = path[index];
+
+            // The last part of the path should be the filename.
             if (path.Length - 1 == index)
             {
-                var fileNode = new FileNode(path[index]);
+                var fileNode = new FileNode(currentPath);
                 parent.AddChild(fileNode);
                 return;
             }
 
-            FolderNode node = null;
-            string folderName = path[index];
-            foreach (var f in parent.Children)
-            {
-                if (f.Text.Equals(folderName))
-                {
-                    node = (FolderNode)f;
-                    break;
-                }
-            }
-
+            // Make a node for the current folder and add it to the parent node.
+            var node = FindFolderNode(parent, currentPath);
             if (node == null)
             {
-                node = new FolderNode(folderName);
+                node = new FolderNode(currentPath);
                 parent.AddChild(node);
             }
 
             ProcessFile(node, path, index + 1);
+        }
+
+        private static FolderNode FindFolderNode(FolderNode parent, string path)
+        {
+            // TODO: This O(n) find gets used a lot, and many of the results could be reused.
+            FolderNode node = null;
+            foreach (var child in parent.SubNodes.ToArray())
+            {
+                if (child.Text.Equals(path))
+                {
+                    node = (FolderNode) child;
+                    break;
+                }
+            }
+
+            return node;
         }
 
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
