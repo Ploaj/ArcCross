@@ -20,13 +20,7 @@ namespace ArcCross
         public byte[] ReadZstdCompressed(int sizeInBytes)
         {
             byte[] compressed = ReadBytes(sizeInBytes);
-            using (var memoryStream = new MemoryStream(compressed))
-            using (var compressionStream = new ZstandardStream(memoryStream, CompressionMode.Decompress))
-            using (var temp = new MemoryStream())
-            {
-                compressionStream.CopyTo(temp);
-                return temp.ToArray();
-            }
+            return DecompressZstd(compressed);
         }
 
         /// <summary>
@@ -37,11 +31,16 @@ namespace ArcCross
         public static byte[] DecompressZstd(byte[] compressed)
         {
             using (var memoryStream = new MemoryStream(compressed))
-            using (var compressionStream = new ZstandardStream(memoryStream, CompressionMode.Decompress))
-            using (var temp = new MemoryStream())
             {
-                compressionStream.CopyTo(temp);
-                return temp.ToArray();
+                using (var compressionStream = new ZstandardStream(memoryStream, CompressionMode.Decompress))
+                {
+                    // TODO: Try and avoid the additional copy.
+                    using (var temp = new MemoryStream())
+                    {
+                        compressionStream.CopyTo(temp);
+                        return temp.ToArray();
+                    }
+                }
             }
         }
 
