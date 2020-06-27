@@ -196,22 +196,12 @@ namespace CrossArc.GUI
                 {
                     Cursor.Current = Cursors.WaitCursor;
 
-
+                    // Make sure the hashes are done before using them.
                     initHashes.Wait();
-
-                    var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
                     ArcFile = new Arc(d.FileName);
 
-                    stopwatch.Stop();
-                    System.Diagnostics.Debug.WriteLine("Create ARC: " + stopwatch.ElapsedMilliseconds);
-
-                    stopwatch.Restart();
-
-                    InitFileSystem();
-
-                    stopwatch.Stop();
-                    System.Diagnostics.Debug.WriteLine("Init file system: " + stopwatch.ElapsedMilliseconds);
+                    treeView1.Nodes.Clear();
+                    treeView1.Nodes.Add(new GuiNode(FileSystem.CreateFileTreeGetRoot(ArcFile.FilePaths, ArcFile.StreamFilePaths)));
 
                     Cursor.Current = Cursors.Arrow;
 
@@ -227,64 +217,6 @@ namespace CrossArc.GUI
                     FilePath = d.FileName;
                 }
             }
-        }
-
-        private void InitFileSystem()
-        {
-            treeView1.Nodes.Clear();
-            FolderNode root = new FolderNode("root");
-
-            foreach (var file in ArcFile.FilePaths)
-            {
-                string[] path = file.Split('/');
-                ProcessFile(root, path, 0);
-            }
-
-            foreach (var file in ArcFile.StreamFilePaths)
-            {
-                string[] path = file.Split('/');
-                ProcessFile(root, path, 0);
-            }
-
-            rootNode = new GuiNode(root);
-            treeView1.Nodes.Add(rootNode);
-        }
-
-        private static void ProcessFile(FolderNode parent, string[] path, int index)
-        {
-            string currentPath = path[index];
-
-            // The last part of the path should be the filename.
-            if (path.Length - 1 == index)
-            {
-                var fileNode = new FileNode(currentPath);
-                parent.AddChild(fileNode);
-                return;
-            }
-
-            // Check if the current folder exists to prevent duplicates.
-            var node = FindFolderNode(parent, currentPath);
-            if (node == null)
-            {
-                node = new FolderNode(currentPath);
-                parent.AddChild(node);
-            }
-
-            ProcessFile(node, path, index + 1);
-        }
-
-        private static FolderNode FindFolderNode(FolderNode parent, string path)
-        {
-            for (int i = 0; i < parent.SubNodes.Count; i++)
-            {
-                var child = parent.SubNodes[i];
-                if (child.Text.Equals(path))
-                {
-                    return (FolderNode)child;
-                }
-            }
-
-            return null;
         }
 
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
@@ -461,44 +393,6 @@ namespace CrossArc.GUI
 
             if (!interrupted)
                 searchWorker.ReportProgress(100, null);
-        }
-
-        private void SearchCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            // add other code here
-            /*if (e.Cancelled && restartWorker)
-            {
-                restartWorker = false;
-                searchWorker.RunWorkerAsync();
-            }*/
-        }
-
-        private void ExportAll(string key)
-        {
-            /*Queue<BaseNode> toSearch = new Queue<BaseNode>();
-            toSearch.Enqueue(Root);
-            List<FileNode> toExport = new List<FileNode>();
-
-            while (toSearch.Count > 0)
-            {
-
-                var s = toSearch.Dequeue();
-
-                if (s.Text.Contains(key))
-                {
-                    if (s is FileNode fn)
-                        toExport.Add(fn);
-                }
-
-                foreach (var b in s.BaseNodes)
-                {
-                    toSearch.Enqueue(b);
-                }
-            }
-
-            ProgressBar bar = new ProgressBar();
-            bar.Show();
-            bar.Extract(toExport.ToArray());*/
         }
 
         private void exportFileSystemToXMLToolStripMenuItem_Click(object sender, EventArgs e)
