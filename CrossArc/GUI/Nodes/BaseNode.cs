@@ -77,7 +77,7 @@ namespace CrossArc.GUI.Nodes
                         info = new FileInformation(file.ArcPath, i);
 
                         writer.WriteStartElement("regional_offset");
-                        writer.WriteAttributeString("tag", ProgressBar.RegionTags[i]);
+                        writer.WriteAttributeString("tag", FileExtraction.RegionTags[i]);
                         writer.WriteAttributeString("offset", info.ArcOffset);
 
                         if (info.CompressedSize == info.DecompressedSize)
@@ -128,12 +128,12 @@ namespace CrossArc.GUI.Nodes
                     {
                         info = new FileInformation(file.ArcPath, i);
 
-                        writer.WriteLine($"{ProgressBar.GetRegionalPath(FullPath)},{info.ArcOffset},{info.CompressedSize.ToString("X")},{info.DecompressedSize.ToString("X")}");
+                        writer.WriteLine($"{FileExtraction.GetRegionalPath(FullPath)},{info.ArcOffset},{info.CompressedSize:X},{info.DecompressedSize:X}");
                     }
                 }
                 else
                 {
-                    writer.WriteLine($"{FullPath},{info.ArcOffset},{info.CompressedSize.ToString("X")},{info.DecompressedSize.ToString("X")}");
+                    writer.WriteLine($"{FullPath},{info.ArcOffset},{info.CompressedSize:X},{info.DecompressedSize:X}");
                 }
             }
             if (GetType() == typeof(FolderNode))

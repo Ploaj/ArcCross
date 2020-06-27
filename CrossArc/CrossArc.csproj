@@ -55,6 +55,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FileExtraction.cs" />
     <Compile Include="FileSystem.cs" />
     <Compile Include="GUI\MainForm.cs">
       <SubType>Form</SubType>
