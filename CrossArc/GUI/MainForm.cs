@@ -237,7 +237,23 @@ namespace CrossArc.GUI
                 // Disable the tool strip to prevent opening another arc or hashes before the file has finished downloading.
                 menuStrip1.Enabled = false;
 
-                await DownloadHashesAsync();
+                bool success = true;
+                try
+                {
+                    await DownloadHashesAsync("Hashes_new.txt");
+                }
+                catch (WebException)
+                {
+                    success = false;
+                }
+
+                if (success)
+                {
+                    File.Delete("Hashes.txt");
+                    File.Move("Hashes_new.txt", "Hashes.txt");
+                    File.Delete("Hashes_new.txt");
+                }
+
                 await Task.Run(() =>
                 {
                     // Refresh the hash dictionary.
@@ -249,12 +265,11 @@ namespace CrossArc.GUI
             }
         }
 
-        private async Task DownloadHashesAsync()
+        private async Task DownloadHashesAsync(string path)
         {
-
             using (var client = new WebClient())
             {
-                await client.DownloadFileTaskAsync("https://github.com/ultimate-research/archive-hashes/raw/master/Hashes", "Hashes.txt");
+                await client.DownloadFileTaskAsync("https://github.com/ultimate-research/archive-hashes/raw/master/Hashes", path);
             }
         }
 
