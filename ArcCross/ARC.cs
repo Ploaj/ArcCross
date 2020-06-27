@@ -55,9 +55,9 @@ namespace ArcCross
         // handling
         public bool Initialized { get; internal set; }
 
-        private readonly Dictionary<string, _sFileInformationV2> pathToFileInfo = new Dictionary<string, _sFileInformationV2>();
-        private readonly Dictionary<string, _sFileInformationV1> pathToFileInfoV1 = new Dictionary<string, _sFileInformationV1>();
-        private readonly Dictionary<uint, _sStreamNameToHash> pathCrc32ToStreamInfo = new Dictionary<uint, _sStreamNameToHash>();
+        private Dictionary<string, _sFileInformationV1> pathToFileInfoV1 = new Dictionary<string, _sFileInformationV1>();
+        private Dictionary<string, _sFileInformationV2> pathToFileInfo = new Dictionary<string, _sFileInformationV2>();
+        private Dictionary<uint, _sStreamNameToHash> pathCrc32ToStreamInfo = new Dictionary<uint, _sStreamNameToHash>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Arc"/> class and initializes the file system from the specified path.
@@ -85,11 +85,13 @@ namespace ArcCross
 
         private void InitializePathToFileInfo()
         {
+            pathCrc32ToStreamInfo = new Dictionary<uint, _sStreamNameToHash>(streamNameToHash.Length);
             foreach (var v in streamNameToHash)
                 pathCrc32ToStreamInfo.Add(v.Hash, v);
             
             if (Version == 0x00010000)
             {
+                pathToFileInfoV1 = new Dictionary<string, _sFileInformationV1>(FilePaths.Count);
                 for (int i = 0; i < FilePaths.Count; i++)
                 {
                     if (!pathToFileInfoV1.ContainsKey(FilePaths[i]))
@@ -98,6 +100,7 @@ namespace ArcCross
             }
             else
             {
+                pathToFileInfo = new Dictionary<string, _sFileInformationV2>(FilePaths.Count);
                 for (int i = 0; i < FilePaths.Count; i++)
                 {
                     if (!pathToFileInfo.ContainsKey(FilePaths[i]))
