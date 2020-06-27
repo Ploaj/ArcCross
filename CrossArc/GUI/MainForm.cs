@@ -262,7 +262,7 @@ namespace CrossArc.GUI
                 return;
             }
 
-            // Make a node for the current folder and add it to the parent node.
+            // Check if the current folder exists to prevent duplicates.
             var node = FindFolderNode(parent, currentPath);
             if (node == null)
             {
@@ -275,18 +275,16 @@ namespace CrossArc.GUI
 
         private static FolderNode FindFolderNode(FolderNode parent, string path)
         {
-            // TODO: This O(n) find gets used a lot, and many of the results could be reused.
-            FolderNode node = null;
-            foreach (var child in parent.SubNodes.ToArray())
+            for (int i = 0; i < parent.SubNodes.Count; i++)
             {
+                var child = parent.SubNodes[i];
                 if (child.Text.Equals(path))
                 {
-                    node = (FolderNode) child;
-                    break;
+                    return (FolderNode)child;
                 }
             }
 
-            return node;
+            return null;
         }
 
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
