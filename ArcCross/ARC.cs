@@ -19,6 +19,7 @@ namespace ArcCross
 
         private const ulong Magic = 0xABCDEF9876543210;
 
+        // TODO: Move file header related fields to a separate class/struct.
         private _sArcHeader header;
 
         // stream
@@ -89,13 +90,13 @@ namespace ArcCross
             foreach (var v in streamNameToHash)
                 pathCrc32ToStreamInfo.Add(v.Hash, v);
             
+            // Ignore duplicate paths.
             if (Version == 0x00010000)
             {
                 pathToFileInfoV1 = new Dictionary<string, _sFileInformationV1>(FilePaths.Count);
                 for (int i = 0; i < FilePaths.Count; i++)
                 {
-                    if (!pathToFileInfoV1.ContainsKey(FilePaths[i]))
-                        pathToFileInfoV1.Add(FilePaths[i], fileInfoV1[i]);
+                    pathToFileInfoV1[FilePaths[i]] =  fileInfoV1[i];
                 }
             }
             else
@@ -103,8 +104,7 @@ namespace ArcCross
                 pathToFileInfo = new Dictionary<string, _sFileInformationV2>(FilePaths.Count);
                 for (int i = 0; i < FilePaths.Count; i++)
                 {
-                    if (!pathToFileInfo.ContainsKey(FilePaths[i]))
-                        pathToFileInfo.Add(FilePaths[i], fileInfoV2[i]);
+                    pathToFileInfo[FilePaths[i]] = fileInfoV2[i];
                 }
             }
         }
@@ -227,46 +227,6 @@ namespace ArcCross
                 
                 subFiles = reader.ReadType<_sSubFileInfo>(fsHeader.SubFileCount + fsHeader.SubFileCount2 + extraSubCount);
                 Console.WriteLine("End:" + reader.BaseStream.Position.ToString("X"));
-                //uint max = 0;
-                /*using (StreamWriter writer = new StreamWriter(new FileStream("FS1.txt", FileMode.Create)))
-                    for (int i = 0; i < (int)FSHeader.FileInformationCount; i++)
-                    {
-                        var fileinfo = fileInfoV2[i];
-                        var path = fileInfoPath[fileinfo.PathIndex];
-                        var subindex = fileInfoSubIndex[fileinfo.SubIndexIndex];
-                        writer.WriteLine(fileinfo.Flags.ToString("X") + " " + fileinfo.PathIndex.ToString("X") + " " + subindex.SubFileIndex.ToString("X") + " " + HashDict.GetString(path.Path) + " " + HashDict.GetString(path.FileName));
-                        //max = Math.Max(max, fp.SomeIndex2);
-                    }
-                using (StreamWriter writer = new StreamWriter(new FileStream("FS2.txt", FileMode.Create)))
-                for (int i = (int)FSHeader.FileInformationCount ;i < fileInfoV2.Length; i++)
-                    {
-                        var fileinfo = fileInfoV2[i];
-                        var path = fileInfoPath[fileinfo.PathIndex];
-                        var subindex = fileInfoSubIndex[fileinfo.SubIndexIndex];
-                        writer.WriteLine(fileinfo.Flags.ToString("X") + " " + fileinfo.PathIndex.ToString("X") + " " + subindex.SubFileIndex.ToString("X") + " " + HashDict.GetString(path.Path) + " " + HashDict.GetString(path.FileName));
-                        //max = Math.Max(max, fp.SomeIndex2);
-                    }*/
-                //Console.WriteLine("Max: " + max.ToString("X"));
-
-                /*int MaxIntTableValue = 0;
-                foreach (var g in fileInfoIndex)
-                {
-                    MaxIntTableValue = Math.Max((int)g.FileInformationIndex, MaxIntTableValue);
-                    //Console.WriteLine(HashDict.GetString(g.Hash));
-                }
-                Console.WriteLine("Max table value: " + MaxIntTableValue.ToString("X"));*/
-
-                /*var flags = new System.Collections.Generic.List<uint>();
-                foreach (var g in fileInfoV2)
-                {
-                    if (!flags.Contains(g.Flags))
-                        flags.Add(g.Flags);
-                }*/
-                /*using (StreamWriter writer = new StreamWriter(new FileStream("print.txt", FileMode.Create)))
-                    foreach (var g in PathNameHashLengthLookup)
-                    {
-                        writer.WriteLine(HashDict.GetString(g.FilePathHash) + " " + HashDict.GetString(PathNameHashGroupLookup[IndexTable[g.ExtensionHash]].FileNameHash));
-                    }*/
             }
         }
 
@@ -394,13 +354,6 @@ namespace ArcCross
                     //Console.WriteLine(HashDict.GetString(g.Hash));
                 }
                 Console.WriteLine("Max table value: " + maxIntTableValue.ToString("X"));
-
-                
-                /*using (StreamWriter writer = new StreamWriter(new FileStream("print.txt", FileMode.Create)))
-                    foreach (var g in ActualFullPath)
-                    {
-                        writer.WriteLine(HashDict.GetString(g.Hash));
-                    }*/
             }
         }
 
@@ -515,6 +468,28 @@ namespace ArcCross
                 return GetFileListV2();
         }
 
+        /// <summary>
+        /// Returns an unorganized list of the files in the arc, excluding stream files.
+        /// </summary>
+        /// <returns>An unorganized list of the files in the arc, excluding stream files.</returns>
+        public List<string> GetFileListV1()
+        {
+            var files = new List<string>(fileInfoV1.Length);
+
+            foreach (var fileInfo in fileInfoV1)
+            {
+                string pathString = HashDict.GetString(fileInfo.Parent, (int)(fileInfo.Unk5 & 0xFF));
+
+                string filename = HashDict.GetString(fileInfo.Hash2, (int)(fileInfo.Unk6 & 0xFF));
+                if (filename.StartsWith("0x"))
+                    filename += HashDict.GetString(fileInfo.Extension);
+
+                files.Add(pathString + filename);
+            }
+
+            return files;
+        }
+
         private List<string> GetFileListV2()
         {
             var filePaths = new List<string>(fileInfoV2.Length);
@@ -524,8 +499,6 @@ namespace ArcCross
                 var path = fileInfoPath[fileInfo.PathIndex];
 
                 string pathString = HashDict.GetString(path.Parent, (int) (path.Unk5 & 0xFF));
-                if (pathString.StartsWith("0x"))
-                    pathString += "/";
 
                 string filename = HashDict.GetString(path.FileName, (int) (path.Unk6 & 0xFF));
                 if (filename.StartsWith("0x"))
@@ -765,65 +738,7 @@ namespace ArcCross
 
                 System.Diagnostics.Debug.WriteLine("subfileoffset " + reader.BaseStream.Position.ToString("X"));
                 subFiles = reader.ReadType<_sSubFileInfo>(nodeHeader.SubFileCount + nodeHeader.SubFileCount2);
-                /*SubFileInformationStart = R.BaseStream.Position;
-                SubFileInformation_1 = reader.ReadType<_SubFileInfo>(R, NodeHeader.SubFileCount);
-                SubFileInformationStart2 = R.BaseStream.Position;
-                SubFileInformation_2 = reader.ReadType<_SubFileInfo>(R, NodeHeader.SubFileCount2);*/
-
-                //_sHashInt[] HashInts = reader.ReadType<_sHashInt>(R, NodeHeader.FolderCount);
-
-                // okay some more file information
-                //uint FileHashCount = reader.ReadUInt32();
-                //uint UnknownTableCount = reader.ReadUInt32();
-
-                //_sExtraFITable[] Extra1 = reader.ReadType<_sExtraFITable>(R, UnknownTableCount);
-                //_sExtraFITable2[] Extra2 = reader.ReadType<_sExtraFITable2>(R, FileHashCount);
-
-                /*reader.BaseStream.Position += 8 * NodeHeader.FileInformationCount;
-
-                FolderHashDict = new Dictionary<uint, _sDirectoryList>();
-                foreach (_sDirectoryList fh in DirectoryLists)
-                {
-                    FolderHashDict.Add(fh.HashID, fh);
-                }
-
-                foreach (_sDirectoryOffsets chunk in DirectoryOffsets_1)
-                {
-                    for (int i = 0; i < chunk.SubDataCount; i++)
-                        if (!ChunkHash1.ContainsKey((int)chunk.SubDataStartIndex + i))
-                            ChunkHash1.Add((int)chunk.SubDataStartIndex + i, chunk);
-                }
-                foreach (_sDirectoryOffsets chunk in DirectoryOffsets_2)
-                {
-                    for (int i = 0; i < chunk.SubDataCount; i++)
-                        if (!ChunkHash2.ContainsKey((int)chunk.SubDataStartIndex + i))
-                            ChunkHash2.Add((int)chunk.SubDataStartIndex + i, chunk);
-                }*/
             }
-        }
-
-        /// <summary>
-        /// Returns an unorganized list of the files in the arc, excluding stream files.
-        /// </summary>
-        /// <returns>An unorganized list of the files in the arc, excluding stream files.</returns>
-        public List<string> GetFileListV1()
-        {
-            var files = new List<string>(fileInfoV1.Length);
-
-            foreach (var fileInfo in fileInfoV1)
-            {
-                string pathString = HashDict.GetString(fileInfo.Parent, (int)(fileInfo.Unk5 & 0xFF));
-                if (pathString.StartsWith("0x"))
-                    pathString += "/";
-
-                string filename = HashDict.GetString(fileInfo.Hash2, (int)(fileInfo.Unk6 & 0xFF));
-                if (filename.StartsWith("0x"))
-                    filename += HashDict.GetString(fileInfo.Extension);
-
-                files.Add(pathString + filename);
-            }
-
-            return files;
         }
 
         private void GetFileInformation(_sFileInformationV1 fileInfo, out long offset, out uint compSize, out uint decompSize, int regionIndex = 0)

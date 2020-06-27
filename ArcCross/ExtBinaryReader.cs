@@ -34,10 +34,10 @@ namespace ArcCross
             {
                 using (var compressionStream = new ZstandardStream(memoryStream, CompressionMode.Decompress))
                 {
-                    // TODO: Try and avoid the additional copy.
                     using (var temp = new MemoryStream())
                     {
                         compressionStream.CopyTo(temp);
+                        // TODO: Try and avoid the additional copy.
                         return temp.ToArray();
                     }
                 }

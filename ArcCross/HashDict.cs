@@ -114,7 +114,7 @@ namespace ArcCross
                 }
                 return hashLookup[hash][0];
             }
-            return "0x" + hash.ToString("X");
+            return $"0x{hash:X}/";
         }
 
     }
