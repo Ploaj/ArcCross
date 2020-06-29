@@ -201,7 +201,8 @@ namespace CrossArc.GUI
                     ArcFile = new Arc(d.FileName);
 
                     treeView1.Nodes.Clear();
-                    treeView1.Nodes.Add(new GuiNode(FileSystem.CreateFileTreeGetRoot(ArcFile.FilePaths, ArcFile.StreamFilePaths)));
+                    rootNode = new GuiNode(FileSystem.CreateFileTreeGetRoot(ArcFile.FilePaths, ArcFile.StreamFilePaths));
+                    treeView1.Nodes.Add(rootNode);
 
                     Cursor.Current = Cursors.Arrow;
 
