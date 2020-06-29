@@ -44,8 +44,6 @@ namespace CrossArc.GUI
 
         private Func<string, BaseNode, bool> searchCallback { get; set; }
 
-        private readonly object lockTree = new object();
-
         public Dictionary<string, FileInformation> pathToFileInfomation = new Dictionary<string, FileInformation>();
 
         public MainForm()
@@ -377,32 +375,29 @@ namespace CrossArc.GUI
 
             while (toSearch.Count > 0)
             {
-                lock (lockTree)
+                if (searchBox != null && key != searchBox.Text
+                    || searchWorker == null
+                    || searchWorker.CancellationPending)
                 {
-                    if (searchBox != null && key != searchBox.Text
-                        || searchWorker == null
-                        || searchWorker.CancellationPending)
-                    {
-                        interrupted = true;
-                        break;
-                    }
+                    interrupted = true;
+                    break;
+                }
 
-                    var s = toSearch.Dequeue();
+                var s = toSearch.Dequeue();
 
-                    // TODO: (Optimization idea)
-                    // if you do a search like "fighter/*.prc", the program should know that
-                    // it is impossible to find such a path in "sound", or "effect", etc.
-                    // It may be necessary to remove regex implementation for it.
-                    if (searchCallback(key, s))
+                // TODO: (Optimization idea)
+                // if you do a search like "fighter/*.prc", the program should know that
+                // it is impossible to find such a path in "sound", or "effect", etc.
+                // It may be necessary to remove regex implementation for it.
+                if (searchCallback(key, s))
+                {
+                    searchWorker.ReportProgress(0, s);
+                }
+                else
+                {
+                    foreach (var b in s.SubNodes)
                     {
-                        searchWorker.ReportProgress(0, s);
-                    }
-                    else
-                    {
-                        foreach (var b in s.SubNodes)
-                        {
-                            toSearch.Enqueue(b);
-                        }
+                        toSearch.Enqueue(b);
                     }
                 }
             }
