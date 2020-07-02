@@ -50,15 +50,15 @@ namespace CrossArc.GUI
         {
             InitializeComponent();
 
-            treeView1.BeforeExpand += folderTree_BeforeExpand;
+            fileTreeView.BeforeExpand += folderTree_BeforeExpand;
 
-            treeView1.NodeMouseClick += (sender, args) => treeView1.SelectedNode = args.Node;
+            fileTreeView.NodeMouseClick += (sender, args) => fileTreeView.SelectedNode = args.Node;
 
-            treeView1.HideSelection = false;
+            fileTreeView.HideSelection = false;
 
-            treeView1.ImageList = new ImageList();
-            treeView1.ImageList.Images.Add("folder", Properties.Resources.folder);
-            treeView1.ImageList.Images.Add("file", Properties.Resources.file);
+            fileTreeView.ImageList = new ImageList();
+            fileTreeView.ImageList.Images.Add("folder", Properties.Resources.folder);
+            fileTreeView.ImageList.Images.Add("file", Properties.Resources.file);
 
             exportFileSystemToXMLToolStripMenuItem.Enabled = false;
             exportFileSystemToTXTToolStripMenuItem.Enabled = false;
@@ -104,13 +104,13 @@ namespace CrossArc.GUI
 
         private void ExtractFile(object sender, EventArgs args)
         {
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n && n.Base is FileNode file)
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n && n.Base is FileNode file)
             {
                 ProgressBar bar = new ProgressBar();
                 bar.Show();
                 bar.Extract(new[] { file });
             }
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
             {
                 ProgressBar bar = new ProgressBar();
                 bar.Show();
@@ -120,13 +120,13 @@ namespace CrossArc.GUI
 
         private void ExtractFileComp(object sender, EventArgs args)
         {
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n && n.Base is FileNode file)
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n && n.Base is FileNode file)
             {
                 ProgressBar bar = new ProgressBar { DecompressFiles = false };
                 bar.Show();
                 bar.Extract(new[] { file });
             }
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
             {
                 ProgressBar bar = new ProgressBar { DecompressFiles = false };
                 bar.Show();
@@ -136,14 +136,14 @@ namespace CrossArc.GUI
 
         private void ExtractFileOffset(object sender, EventArgs args)
         {
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n && n.Base is FileNode file)
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n && n.Base is FileNode file)
             {
                 ProgressBar bar = new ProgressBar();
                 bar.UseOffsetName = true;
                 bar.Show();
                 bar.Extract(new[] { file });
             }
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
             {
                 ProgressBar bar = new ProgressBar();
                 bar.UseOffsetName = true;
@@ -154,7 +154,7 @@ namespace CrossArc.GUI
 
         private void ExtractFileCompOffset(object sender, EventArgs args)
         {
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n && n.Base is FileNode file)
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n && n.Base is FileNode file)
             {
                 ProgressBar bar = new ProgressBar();
                 bar.UseOffsetName = true;
@@ -162,7 +162,7 @@ namespace CrossArc.GUI
                 bar.Show();
                 bar.Extract(new[] { file });
             }
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
             {
                 ProgressBar bar = new ProgressBar();
                 bar.UseOffsetName = true;
@@ -198,9 +198,9 @@ namespace CrossArc.GUI
                     initHashes.Wait();
                     ArcFile = new Arc(d.FileName);
 
-                    treeView1.Nodes.Clear();
+                    fileTreeView.Nodes.Clear();
                     rootNode = new GuiNode(FileSystem.CreateFileTreeGetRoot(ArcFile.FilePaths, ArcFile.StreamFilePaths));
-                    treeView1.Nodes.Add(rootNode);
+                    fileTreeView.Nodes.Add(rootNode);
 
                     Cursor.Current = Cursors.Arrow;
 
@@ -220,10 +220,10 @@ namespace CrossArc.GUI
 
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
         {
-            propertyGrid1.SelectedObject = null;
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n && n.Base is FileNode file)
+            arcFilePropertyGrid.SelectedObject = null;
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n && n.Base is FileNode file)
             {
-                propertyGrid1.SelectedObject = file.FileInformation;
+                arcFilePropertyGrid.SelectedObject = file.FileInformation;
             }
         }
 
@@ -284,7 +284,7 @@ namespace CrossArc.GUI
                 searchWorker.Dispose();
                 searchWorker = null;
             }
-            treeView1.Nodes.Clear();
+            fileTreeView.Nodes.Clear();
 
             if (searchBox.Text != "")
             {
@@ -300,7 +300,7 @@ namespace CrossArc.GUI
             }
             else
             {
-                treeView1.Nodes.Add(rootNode);
+                fileTreeView.Nodes.Add(rootNode);
                 searchLabel.Visible = false;
             }
         }
@@ -357,7 +357,7 @@ namespace CrossArc.GUI
                     // TODO: a potentially better way to implement search results is to
                     // apply a filter over the nodes. However, this requires changing
                     // GUINode.cs, since by default it displays every subnode
-                    treeView1.Nodes.Add(new GuiNode((BaseNode)args.UserState));
+                    fileTreeView.Nodes.Add(new GuiNode((BaseNode)args.UserState));
                 }
             }
         }
