@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Windows.Forms;
 
 namespace CrossArc.GUI.Nodes
 {
@@ -19,6 +22,11 @@ namespace CrossArc.GUI.Nodes
 
         [ReadOnly(true), DisplayName("Arc Path")]
         public string Path { get; set; }
+
+        [ReadOnly(true), DisplayName("Shared files")]
+        public string[] SharedResources { get; }
+
+        public List<string> _sharedResources = new List<string>();
 
         public long Offset;
 
@@ -44,6 +52,12 @@ namespace CrossArc.GUI.Nodes
                 Offset = off;
                 CompressedSize = comp;
                 DecompressedSize = decomp;
+
+                _sharedResources = MainForm.ArcFile.GetSharedFiles(Path, region);
+
+                _sharedResources.Remove(Path); // don't display our own path
+
+                SharedResources = _sharedResources.ToArray();
             }
         }
     }
