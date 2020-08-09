@@ -584,7 +584,7 @@ namespace ArcCross
                 fileOut = pathToFileInfo[path];
                 return true;
             }
-            fileOut = default;
+            fileOut = default(_sFileInformationV2);
             return false;
         }
 
