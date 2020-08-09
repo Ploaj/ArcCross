@@ -120,8 +120,10 @@ namespace ArcCross
 
                 if (!SharedLookup.ContainsKey(subFileInfo)) SharedLookup[subFileInfo] = new List<_sFileInformationV2>();
 
-                if (!SharedLookup[subFileInfo].Select(f => f.PathIndex).Contains(fi.PathIndex))
-                    SharedLookup[subFileInfo].Add(fi);
+                var fiv = SharedLookup[subFileInfo];
+
+                if (!fiv.Select(f => f.PathIndex).Contains(fi.PathIndex)) // prevent duplicate files with same path
+                    fiv.Add(fi);
             }
         }
 
