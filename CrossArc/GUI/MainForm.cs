@@ -225,6 +225,7 @@ namespace CrossArc.GUI
             {
                 arcFilePropertyGrid.SelectedObject = file.FileInformation;
             }
+            arcFilePropertyGrid.ExpandAllGridItems();
         }
 
         private async void updateHashesToolStripMenuItem_Click(object sender, EventArgs e)

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Zstandard.Net;
 
@@ -59,6 +60,7 @@ namespace ArcCross
         private Dictionary<string, _sFileInformationV1> pathToFileInfoV1 = new Dictionary<string, _sFileInformationV1>();
         private Dictionary<string, _sFileInformationV2> pathToFileInfo = new Dictionary<string, _sFileInformationV2>();
         private Dictionary<uint, _sStreamNameToHash> pathCrc32ToStreamInfo = new Dictionary<uint, _sStreamNameToHash>();
+        private IDictionary<_sSubFileInfo, List<_sFileInformationV2>> SharedLookup = new Dictionary<_sSubFileInfo, List<_sFileInformationV2>>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Arc"/> class and initializes the file system from the specified path.
@@ -71,6 +73,7 @@ namespace ArcCross
             FilePaths = GetFileList();
             StreamFilePaths = GetStreamFileList();
 
+            InitializeSharedLookup();
             InitializePathToFileInfo();
         }
 
@@ -106,6 +109,21 @@ namespace ArcCross
                 {
                     pathToFileInfo[FilePaths[i]] = fileInfoV2[i];
                 }
+            }
+        }
+
+        private void InitializeSharedLookup()
+        {
+            foreach (var fi in fileInfoV2)
+            {
+                GetSubInfo(fi, out var subFileInfo, out var _);
+
+                if (!SharedLookup.ContainsKey(subFileInfo)) SharedLookup[subFileInfo] = new List<_sFileInformationV2>();
+
+                var fiv = SharedLookup[subFileInfo];
+
+                if (!fiv.Select(f => f.PathIndex).Contains(fi.PathIndex)) // prevent duplicate files with same path
+                    fiv.Add(fi);
             }
         }
 
@@ -385,6 +403,24 @@ namespace ArcCross
             }
         }
 
+        public List<string> GetSharedFiles(string path, int region = 0)
+        {
+            List<string> shared = new List<string>();
+            if (GetArcFileInfoV2(path, out var fileInfo))
+            {
+                GetSubInfo(fileInfo, out var subFile, out _, region);
+
+                var fiv = SharedLookup[subFile];
+
+                foreach (var fi in fiv)
+                    shared.Add(GetFilePathFromInfo(fi));
+
+                shared.Sort();
+            }
+
+            return shared;
+        }
+
         public long MaxOffset()
         {
             long max = 0;
@@ -490,25 +526,7 @@ namespace ArcCross
             return files;
         }
 
-        private List<string> GetFileListV2()
-        {
-            var filePaths = new List<string>(fileInfoV2.Length);
-
-            foreach (var fileInfo in fileInfoV2)
-            {
-                var path = fileInfoPath[fileInfo.PathIndex];
-
-                string pathString = HashDict.GetString(path.Parent, (int) (path.Unk5 & 0xFF));
-
-                string filename = HashDict.GetString(path.FileName, (int) (path.Unk6 & 0xFF));
-                if (filename.StartsWith("0x"))
-                    filename += HashDict.GetString(path.Extension);
-
-                filePaths.Add(pathString + filename);
-            }
-
-            return filePaths;
-        }
+        private List<string> GetFileListV2() => fileInfoV2.Select(f => GetFilePathFromInfo(f)).ToList();
 
         /// <summary>
         /// returns the decompressed file
@@ -561,6 +579,28 @@ namespace ArcCross
             return data;
         }
 
+        private bool GetArcFileInfoV2(string path, out _sFileInformationV2 fileOut)
+        {
+            if (pathToFileInfo.ContainsKey(path))
+            {
+                fileOut = pathToFileInfo[path];
+                return true;
+            }
+            fileOut = default(_sFileInformationV2);
+            return false;
+        }
+
+        private string GetFilePathFromInfo(_sFileInformationV2 file)
+        {
+            var path = fileInfoPath[file.PathIndex]; 
+
+            string pathString = HashDict.GetString(path.Parent, (int)(path.Unk5 & 0xFF));
+            string filename = HashDict.GetString(path.FileName, (int)(path.Unk6 & 0xFF));
+            if (filename.StartsWith("0x"))
+                filename += HashDict.GetString(path.Extension);
+
+            return pathString + filename;
+        }
 
         /// <summary>
         /// gets file information from the file's path
@@ -620,15 +660,7 @@ namespace ArcCross
                 GetFileInformation(pathToFileInfo[filepath], out offset, out compSize, out decompSize, regionIndex);
         }
 
-        /// <summary>
-        /// Gets the information for a given file info
-        /// </summary>
-        /// <param name="fileinfo"></param>
-        /// <param name="offset"></param>
-        /// <param name="compSize"></param>
-        /// <param name="decompSize"></param>
-        /// <param name="regionIndex"></param>
-        private void GetFileInformation(_sFileInformationV2 fileinfo, out long offset, out uint compSize, out uint decompSize, int regionIndex = 0)
+        public void GetSubInfo(_sFileInformationV2 fileinfo, out _sSubFileInfo subFile, out _sDirectoryOffset directoryOffset, int regionIndex = 0)
         {
             var fileIndex = fileInfoIndex[fileinfo.IndexIndex];
 
@@ -641,8 +673,8 @@ namespace ArcCross
             var path = fileInfoPath[fileinfo.PathIndex];
             var subIndex = fileInfoSubIndex[fileinfo.SubIndexIndex];
 
-            var subFile = subFiles[subIndex.SubFileIndex];
-            var directoryOffset = directoryOffsets[subIndex.DirectoryOffsetIndex];
+            subFile = subFiles[subIndex.SubFileIndex];
+            directoryOffset = directoryOffsets[subIndex.DirectoryOffsetIndex];
 
             //regional
             if ((fileinfo.Flags & 0x00008000) == 0x8000)
@@ -651,6 +683,20 @@ namespace ArcCross
                 subFile = subFiles[subIndex.SubFileIndex];
                 directoryOffset = directoryOffsets[subIndex.DirectoryOffsetIndex];
             }
+
+        }
+
+        /// <summary>
+        /// Gets the information for a given file info
+        /// </summary>
+        /// <param name="fileinfo"></param>
+        /// <param name="offset"></param>
+        /// <param name="compSize"></param>
+        /// <param name="decompSize"></param>
+        /// <param name="regionIndex"></param>
+        private void GetFileInformation(_sFileInformationV2 fileinfo, out long offset, out uint compSize, out uint decompSize, int regionIndex = 0)
+        {
+            GetSubInfo(fileinfo, out var subFile, out var directoryOffset, regionIndex);
 
             offset = (header.FileDataOffset + directoryOffset.Offset + (subFile.Offset << 2));
             compSize = subFile.CompSize;
