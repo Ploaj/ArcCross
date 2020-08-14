@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace ArcCross
 {
+    [DebuggerDisplay("{PathString}")]
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct _sFileInformationPath
     {
@@ -15,6 +17,21 @@ namespace ArcCross
         public uint Unk5;
         public uint FileName;
         public uint Unk6;
+
+        public string PathString { get
+            {
+                if(HashDict.Initialized)
+                {
+                    string pathString = HashDict.GetString(Parent, (int)(Unk5 & 0xFF));
+                    string filename = HashDict.GetString(FileName, (int)(Unk6 & 0xFF));
+                    if (filename.StartsWith("0x"))
+                        filename += HashDict.GetString(Extension);
+
+                    return pathString + filename;
+                }
+                return Path.ToString("X8");
+            } 
+        }
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -46,6 +63,6 @@ namespace ArcCross
         public uint IndexIndex; 
 
         public uint SubIndexIndex;
-        public uint Flags; 
+        public uint Flags;
     }
 }

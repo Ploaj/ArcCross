@@ -68,6 +68,7 @@ namespace CrossArc.GUI
             comboBox1.SelectedIndexChanged += (sender, args) =>
             {
                 SelectedRegion = comboBox1.SelectedIndex;
+                ArcFile.UpdateRegion(SelectedRegion);
                 treeView1_AfterSelect(null, null);
             };
 
