@@ -8,6 +8,7 @@ using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -38,7 +39,8 @@ namespace CrossArc.GUI
 
         private BackgroundWorker searchWorker;
 
-        private Regex regexPattern = null;
+        private Regex fullPathRegexPattern = null;
+        private Regex nodeRegexPattern = null;
 
         private bool searchOffset = false;
 
@@ -68,7 +70,10 @@ namespace CrossArc.GUI
             comboBox1.SelectedIndexChanged += (sender, args) =>
             {
                 SelectedRegion = comboBox1.SelectedIndex;
-                ArcFile.UpdateRegion(SelectedRegion);
+                
+                if(ArcFile != null)
+                    ArcFile.UpdateRegion(SelectedRegion);
+
                 treeView1_AfterSelect(null, null);
             };
 
@@ -197,7 +202,7 @@ namespace CrossArc.GUI
 
                     // Make sure the hashes are done before using them.
                     initHashes.Wait();
-                    ArcFile = new Arc(d.FileName);
+                    ArcFile = new Arc(d.FileName, SelectedRegion);
 
                     fileTreeView.Nodes.Clear();
                     rootNode = new GuiNode(FileSystem.CreateFileTreeGetRoot(ArcFile.FilePaths, ArcFile.StreamFilePaths));
@@ -320,10 +325,9 @@ namespace CrossArc.GUI
             searchBox_TextChanged(null, null);
         }
 
-        private void SetRegexPattern()
+        private Regex CreateRegexPattern(string path)
         {
-            regexPattern = new Regex("^root/"
-                + Regex.Escape(searchBox.Text)
+            return new Regex($"^{Regex.Escape(path)}"
                 .Replace(@"\?", ".")
                 .Replace(@"\*", ".*")
                 + "$",
@@ -331,9 +335,16 @@ namespace CrossArc.GUI
             );
         }
 
+        private void SetRegexPattern()
+        {
+            fullPathRegexPattern = CreateRegexPattern($"root/{searchBox.Text}");
+            nodeRegexPattern = CreateRegexPattern($"{searchBox.Text}");
+        }
+
         private bool SearchCheckPath(string path, BaseNode node)
         {
-            return regexPattern.IsMatch(node.FullPath);
+
+            return fullPathRegexPattern.IsMatch(node.FullPath) || nodeRegexPattern.IsMatch(node.Text);
         }
 
         private bool SearchCheckOffset(string offsetStr, BaseNode node)
