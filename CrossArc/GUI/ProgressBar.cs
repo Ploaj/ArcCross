@@ -8,24 +8,6 @@ namespace CrossArc.GUI
 {
     public partial class ProgressBar : Form
     {
-        public static readonly string[] RegionTags =
-        {
-            "+jp_ja",
-            "+us_en",
-            "+us_fr",
-            "+us_es",
-            "+eu_en",
-            "+eu_fr",
-            "+eu_es",
-            "+eu_de",
-            "+eu_nl",
-            "+eu_it",
-            "+eu_ru",
-            "+kr_ko",
-            "+zh_cn",
-            "+zh_tw"
-        };
-
         public ProgressBar()
         {
             InitializeComponent();
@@ -47,11 +29,11 @@ namespace CrossArc.GUI
             thread.Start();
         }
 
-        public void Update(int i, string message)
+        public void UpdateProgress(int i, string message)
         {
             if (InvokeRequired)
             {
-                BeginInvoke(new Action<int, string>(Update), i, message);
+                BeginInvoke(new Action<int, string>(UpdateProgress), i, message);
                 return;
             }
 
@@ -78,57 +60,28 @@ namespace CrossArc.GUI
                 bool regional = MainForm.ArcFile.IsRegional(file.ArcPath);
 
                 if (regional && MainForm.SelectedRegion == 14)
-                    ExtractAllRegions(path, file.ArcPath);
+                    FileExtraction.ExtractAllRegions(path, file.ArcPath, DecompressFiles, UseOffsetName);
                 else
                 {
                     if (regional)
-                        path = path.Replace(Path.GetExtension(path), RegionTags[MainForm.SelectedRegion] + Path.GetExtension(path));
+                        path = path.Replace(Path.GetExtension(path), FileExtraction.RegionTags[MainForm.SelectedRegion] + Path.GetExtension(path));
 
-                    SaveFile(path, file.ArcPath, MainForm.SelectedRegion);
+                    FileExtraction.SaveFile(path, file.ArcPath, MainForm.SelectedRegion, DecompressFiles, UseOffsetName);
                 }
 
-                Update((int)Math.Floor((index / (float)toExtract.Length) * 100), path);
+                UpdateProgress(GetPercentage(index, toExtract.Length), path);
                 index++;
             }
-            Update(100, "Done");
-            // TODO: Just don't use a progress bar for a small number of files to extract.
-            Thread.Sleep(1000);
-            Update(101, "Done");
+            UpdateProgress(100, "Done");
+
+            // Make sure the completion message stays on screen long enough to be read.
+            Thread.Sleep(500);
+            UpdateProgress(101, "Done");
         }
 
-        public static string GetRegionalPath(string path)
+        private int GetPercentage(int current, int total)
         {
-            return path.Replace(Path.GetExtension(path), RegionTags[MainForm.SelectedRegion] + Path.GetExtension(path));
-        }
-
-        private void ExtractAllRegions(string path, string arcPath)
-        {
-            for (int i = 0; i < 14; i++)
-            {
-                var newPath = path.Replace(Path.GetExtension(path), RegionTags[i] + Path.GetExtension(path));
-
-                SaveFile(newPath, arcPath, i);
-            }
-        }
-
-        private void SaveFile(string filepath, string arcpath, int i)
-        {
-            MainForm.ArcFile.GetFileInformation(arcpath, out long offset, out uint compSize, out uint decompSize, out bool regional, i);
-
-            byte[] data;
-
-            if (DecompressFiles)
-                data = MainForm.ArcFile.GetFile(arcpath, i);
-            else
-                data = MainForm.ArcFile.GetFileCompressed(arcpath, i);
-
-            if (UseOffsetName)
-            {
-                var extension = Path.GetExtension(filepath);
-                filepath = filepath.Replace(extension, "_0x" + offset.ToString("X8") + extension);
-            }
-
-            File.WriteAllBytes(filepath, data);
+            return (int)Math.Floor((current / (float)total) * 100); ;
         }
 
         public void SetMessage(string message)

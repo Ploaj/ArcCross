@@ -5,7 +5,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
 using System.Globalization;
+using System.IO;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -36,7 +38,11 @@ namespace CrossArc.GUI
 
         private BackgroundWorker searchWorker;
 
-        private readonly object lockTree = new object();
+        private Regex regexPattern = null;
+
+        private bool searchOffset = false;
+
+        private Func<string, BaseNode, bool> searchCallback { get; set; }
 
         public Dictionary<string, FileInformation> pathToFileInfomation = new Dictionary<string, FileInformation>();
 
@@ -44,15 +50,15 @@ namespace CrossArc.GUI
         {
             InitializeComponent();
 
-            treeView1.BeforeExpand += folderTree_BeforeExpand;
+            fileTreeView.BeforeExpand += folderTree_BeforeExpand;
 
-            treeView1.NodeMouseClick += (sender, args) => treeView1.SelectedNode = args.Node;
+            fileTreeView.NodeMouseClick += (sender, args) => fileTreeView.SelectedNode = args.Node;
 
-            treeView1.HideSelection = false;
+            fileTreeView.HideSelection = false;
 
-            treeView1.ImageList = new ImageList();
-            treeView1.ImageList.Images.Add("folder", Properties.Resources.folder);
-            treeView1.ImageList.Images.Add("file", Properties.Resources.file);
+            fileTreeView.ImageList = new ImageList();
+            fileTreeView.ImageList.Images.Add("folder", Properties.Resources.folder);
+            fileTreeView.ImageList.Images.Add("file", Properties.Resources.file);
 
             exportFileSystemToXMLToolStripMenuItem.Enabled = false;
             exportFileSystemToTXTToolStripMenuItem.Enabled = false;
@@ -87,17 +93,24 @@ namespace CrossArc.GUI
                 item.Click += ExtractFileCompOffset;
                 NodeContextMenu.MenuItems.Add(item);
             }
+
+            searchOffset = searchOffsetCheckBox.Checked;
+
+            if (searchOffset)
+                searchCallback = SearchCheckOffset;
+            else
+                searchCallback = SearchCheckPath;
         }
 
         private void ExtractFile(object sender, EventArgs args)
         {
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n && n.Base is FileNode file)
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n && n.Base is FileNode file)
             {
                 ProgressBar bar = new ProgressBar();
                 bar.Show();
                 bar.Extract(new[] { file });
             }
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
             {
                 ProgressBar bar = new ProgressBar();
                 bar.Show();
@@ -107,13 +120,13 @@ namespace CrossArc.GUI
 
         private void ExtractFileComp(object sender, EventArgs args)
         {
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n && n.Base is FileNode file)
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n && n.Base is FileNode file)
             {
                 ProgressBar bar = new ProgressBar { DecompressFiles = false };
                 bar.Show();
                 bar.Extract(new[] { file });
             }
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
             {
                 ProgressBar bar = new ProgressBar { DecompressFiles = false };
                 bar.Show();
@@ -123,14 +136,14 @@ namespace CrossArc.GUI
 
         private void ExtractFileOffset(object sender, EventArgs args)
         {
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n && n.Base is FileNode file)
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n && n.Base is FileNode file)
             {
                 ProgressBar bar = new ProgressBar();
                 bar.UseOffsetName = true;
                 bar.Show();
                 bar.Extract(new[] { file });
             }
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
             {
                 ProgressBar bar = new ProgressBar();
                 bar.UseOffsetName = true;
@@ -141,7 +154,7 @@ namespace CrossArc.GUI
 
         private void ExtractFileCompOffset(object sender, EventArgs args)
         {
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n && n.Base is FileNode file)
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n && n.Base is FileNode file)
             {
                 ProgressBar bar = new ProgressBar();
                 bar.UseOffsetName = true;
@@ -149,7 +162,7 @@ namespace CrossArc.GUI
                 bar.Show();
                 bar.Extract(new[] { file });
             }
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n2 && n2.Base is FolderNode folder)
             {
                 ProgressBar bar = new ProgressBar();
                 bar.UseOffsetName = true;
@@ -181,15 +194,13 @@ namespace CrossArc.GUI
                 {
                     Cursor.Current = Cursors.WaitCursor;
 
-                    var s = System.Diagnostics.Stopwatch.StartNew();
-
+                    // Make sure the hashes are done before using them.
                     initHashes.Wait();
                     ArcFile = new Arc(d.FileName);
 
-                    s.Restart();
-
-                    InitFileSystem();
-                    System.Diagnostics.Debug.WriteLine("init nodes: " + s.Elapsed.Milliseconds);
+                    fileTreeView.Nodes.Clear();
+                    rootNode = new GuiNode(FileSystem.CreateFileTreeGetRoot(ArcFile.FilePaths, ArcFile.StreamFilePaths));
+                    fileTreeView.Nodes.Add(rootNode);
 
                     Cursor.Current = Cursors.Arrow;
 
@@ -207,64 +218,14 @@ namespace CrossArc.GUI
             }
         }
 
-        private void InitFileSystem()
-        {
-            treeView1.Nodes.Clear();
-            FolderNode root = new FolderNode("root");
-
-            foreach (var file in ArcFile.FilePaths)
-            {
-                string[] path = file.Split('/');
-                ProcessFile(root, path, 0);
-
-            }
-
-            foreach (var file in ArcFile.StreamFilePaths)
-            {
-                string[] path = file.Split('/');
-                ProcessFile(root, path, 0);
-            }
-
-            rootNode = new GuiNode(root);
-            treeView1.Nodes.Add(rootNode);
-        }
-
-        private void ProcessFile(FolderNode parent, string[] path, int index)
-        {
-            if (path.Length - 1 == index)
-            {
-                var fileNode = new FileNode(path[index]);
-                parent.AddChild(fileNode);
-                return;
-            }
-
-            FolderNode node = null;
-            string folderName = path[index];
-            foreach (var f in parent.Children)
-            {
-                if (f.Text.Equals(folderName))
-                {
-                    node = (FolderNode)f;
-                    break;
-                }
-            }
-
-            if (node == null)
-            {
-                node = new FolderNode(folderName);
-                parent.AddChild(node);
-            }
-
-            ProcessFile(node, path, index + 1);
-        }
-
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
         {
-            propertyGrid1.SelectedObject = null;
-            if (treeView1.SelectedNode != null && treeView1.SelectedNode is GuiNode n && n.Base is FileNode file)
+            arcFilePropertyGrid.SelectedObject = null;
+            if (fileTreeView.SelectedNode != null && fileTreeView.SelectedNode is GuiNode n && n.Base is FileNode file)
             {
-                propertyGrid1.SelectedObject = file.FileInformation;
+                arcFilePropertyGrid.SelectedObject = file.FileInformation;
             }
+            arcFilePropertyGrid.ExpandAllGridItems();
         }
 
         private async void updateHashesToolStripMenuItem_Click(object sender, EventArgs e)
@@ -276,7 +237,23 @@ namespace CrossArc.GUI
                 // Disable the tool strip to prevent opening another arc or hashes before the file has finished downloading.
                 menuStrip1.Enabled = false;
 
-                await DownloadHashesAsync();
+                bool success = true;
+                try
+                {
+                    await DownloadHashesAsync("Hashes_new.txt");
+                }
+                catch (WebException)
+                {
+                    success = false;
+                }
+
+                if (success)
+                {
+                    File.Delete("Hashes.txt");
+                    File.Move("Hashes_new.txt", "Hashes.txt");
+                    File.Delete("Hashes_new.txt");
+                }
+
                 await Task.Run(() =>
                 {
                     // Refresh the hash dictionary.
@@ -288,18 +265,17 @@ namespace CrossArc.GUI
             }
         }
 
-        private async Task DownloadHashesAsync()
+        private async Task DownloadHashesAsync(string path)
         {
-
             using (var client = new WebClient())
             {
-                await client.DownloadFileTaskAsync("https://github.com/ultimate-research/archive-hashes/raw/master/Hashes", "Hashes.txt");
+                await client.DownloadFileTaskAsync("https://github.com/ultimate-research/archive-hashes/raw/master/Hashes", path);
             }
         }
 
         private void searchBox_TextChanged(object sender, EventArgs e)
         {
-            if (!ArcFile.Initialized || rootNode == null)
+            if (ArcFile == null || !ArcFile.Initialized || rootNode == null)
                 return;
 
             // Cancel previous search
@@ -309,16 +285,12 @@ namespace CrossArc.GUI
                 searchWorker.Dispose();
                 searchWorker = null;
             }
-            treeView1.Nodes.Clear();
+            fileTreeView.Nodes.Clear();
 
-            if (searchBox.Text == "")
+            if (searchBox.Text != "")
             {
-                treeView1.Nodes.Add(rootNode);
-                searchLabel.Visible = false;
-            }
-            else
-            {
-                // Start new search
+                SetRegexPattern();
+
                 searchWorker = new BackgroundWorker();
                 searchWorker.DoWork += Search;
                 searchWorker.ProgressChanged += AddNode;
@@ -327,6 +299,49 @@ namespace CrossArc.GUI
                 searchWorker.RunWorkerAsync();
                 searchLabel.Visible = true;
             }
+            else
+            {
+                fileTreeView.Nodes.Add(rootNode);
+                searchLabel.Visible = false;
+            }
+        }
+
+        private void searchOffsetCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            searchOffset = searchOffsetCheckBox.Checked;
+
+            if (searchOffset)
+                searchCallback = SearchCheckOffset;
+            else
+                searchCallback = SearchCheckPath;
+
+            //trigger a re-search
+            searchBox_TextChanged(null, null);
+        }
+
+        private void SetRegexPattern()
+        {
+            regexPattern = new Regex("^root/"
+                + Regex.Escape(searchBox.Text)
+                .Replace(@"\?", ".")
+                .Replace(@"\*", ".*")
+                + "$",
+                RegexOptions.Compiled | RegexOptions.IgnoreCase
+            );
+        }
+
+        private bool SearchCheckPath(string path, BaseNode node)
+        {
+            return regexPattern.IsMatch(node.FullPath);
+        }
+
+        private bool SearchCheckOffset(string offsetStr, BaseNode node)
+        {
+            return node is FileNode file &&
+                offsetStr.Length >= 3 &&
+                offsetStr.StartsWith("0x") &&
+                long.TryParse(offsetStr.Remove(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var value) &&
+                file.FileInformation.Offset == value;
         }
 
         private void AddNode(object sender, ProgressChangedEventArgs args)
@@ -339,7 +354,12 @@ namespace CrossArc.GUI
                     searchLabel.Visible = false;
                 }
                 else
-                    treeView1.Nodes.Add(new GuiNode((BaseNode)args.UserState));
+                {
+                    // TODO: a potentially better way to implement search results is to
+                    // apply a filter over the nodes. However, this requires changing
+                    // GUINode.cs, since by default it displays every subnode
+                    fileTreeView.Nodes.Add(new GuiNode((BaseNode)args.UserState));
+                }
             }
         }
 
@@ -356,30 +376,26 @@ namespace CrossArc.GUI
 
             while (toSearch.Count > 0)
             {
-                lock (lockTree)
+                if (searchBox != null && key != searchBox.Text
+                    || searchWorker == null
+                    || searchWorker.CancellationPending)
                 {
-                    if (searchBox != null && key != searchBox.Text || searchWorker == null || searchWorker.CancellationPending)
-                    {
-                        interrupted = true;
-                        break;
-                    }
+                    interrupted = true;
+                    break;
+                }
 
-                    var s = toSearch.Dequeue();
+                var s = toSearch.Dequeue();
 
-                    if (s.Text.Contains(key))
-                    {
-                        searchWorker.ReportProgress(0, s);
-                    }
-
-                    if (s is FileNode file &&
-                        key.Length >= 3 &&
-                        key.StartsWith("0x") &&
-                        long.TryParse(key.Substring(2, key.Length - 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var value) &&
-                        file.FileInformation.Offset == value)
-                    {
-                        searchWorker.ReportProgress(0, s);
-                    }
-
+                // TODO: (Optimization idea)
+                // if you do a search like "fighter/*.prc", the program should know that
+                // it is impossible to find such a path in "sound", or "effect", etc.
+                // It may be necessary to remove regex implementation for it.
+                if (searchCallback(key, s))
+                {
+                    searchWorker.ReportProgress(0, s);
+                }
+                else
+                {
                     foreach (var b in s.SubNodes)
                     {
                         toSearch.Enqueue(b);
@@ -391,69 +407,38 @@ namespace CrossArc.GUI
                 searchWorker.ReportProgress(100, null);
         }
 
-        private void SearchCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            // add other code here
-            /*if (e.Cancelled && restartWorker)
-            {
-                restartWorker = false;
-                searchWorker.RunWorkerAsync();
-            }*/
-        }
-
-        private void ExportAll(string key)
-        {
-            /*Queue<BaseNode> toSearch = new Queue<BaseNode>();
-            toSearch.Enqueue(Root);
-            List<FileNode> toExport = new List<FileNode>();
-
-            while (toSearch.Count > 0)
-            {
-
-                var s = toSearch.Dequeue();
-
-                if (s.Text.Contains(key))
-                {
-                    if (s is FileNode fn)
-                        toExport.Add(fn);
-                }
-
-                foreach (var b in s.BaseNodes)
-                {
-                    toSearch.Enqueue(b);
-                }
-            }
-
-            ProgressBar bar = new ProgressBar();
-            bar.Show();
-            bar.Extract(toExport.ToArray());*/
-        }
-
         private void exportFileSystemToXMLToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ExportFS(true);
+            ExportFileSystemXml();
         }
 
-        private void exportFileSystemToTXTToolStripMenuItem_Click(object sender, EventArgs e)
+        private void exportFileSystemToCsvToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ExportFS(false);
+            ExportFileSystemCsv();
         }
 
-        private void ExportFS(bool xml)
+        private void ExportFileSystemCsv()
         {
             using (SaveFileDialog d = new SaveFileDialog())
             {
-                if (xml)
-                    d.Filter = "XML (*.xml)|*.xml";
-                else
-                    d.Filter = "TXT (*.txt)|*.txt";
+                d.Filter = "CSV (*.csv)|*.csv";
 
                 if (d.ShowDialog() == DialogResult.OK)
                 {
-                    if (xml)
-                        rootNode.Base.WriteToFileXML(d.FileName);
-                    else
-                        rootNode.Base.WriteToFileTXT(d.FileName);
+                    rootNode.Base.WriteToFileCsv(d.FileName);
+                }
+            }
+        }
+
+        private void ExportFileSystemXml()
+        {
+            using (SaveFileDialog d = new SaveFileDialog())
+            {
+                d.Filter = "XML (*.xml)|*.xml";
+
+                if (d.ShowDialog() == DialogResult.OK)
+                {
+                    rootNode.Base.WriteToFileXML(d.FileName);
                 }
             }
         }

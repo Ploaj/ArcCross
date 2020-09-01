@@ -7,20 +7,20 @@ namespace CrossArc.GUI.Nodes
     public class BaseNode
     {
         public string Text { get; set; }
-        
+
         public string FullPath
         {
             get
             {
-                if(ParentFolder != null)
+                if (ParentFolder != null)
                     return ParentFolder.FullPath + "/" + Text;
 
                 return Text;
             }
         }
-        
+
         public List<BaseNode> SubNodes { get; set; } = new List<BaseNode>();
-        
+
         public FolderNode ParentFolder
         {
             get
@@ -60,7 +60,7 @@ namespace CrossArc.GUI.Nodes
                 writer.WriteAttributeString("name", Text);
                 writer.WriteAttributeString("offset", info.ArcOffset);
 
-                if(info.CompressedSize == info.DecompressedSize)
+                if (info.CompressedSize == info.DecompressedSize)
                 {
                     writer.WriteAttributeString("size", info.CompressedSize.ToString("X"));
                 }
@@ -72,12 +72,12 @@ namespace CrossArc.GUI.Nodes
 
                 if (info.region)
                 {
-                    for(int i = 0; i < 14; i++)
+                    for (int i = 0; i < 14; i++)
                     {
                         info = new FileInformation(file.ArcPath, i);
 
                         writer.WriteStartElement("regional_offset");
-                        writer.WriteAttributeString("tag", ProgressBar.RegionTags[i]);
+                        writer.WriteAttributeString("tag", FileExtraction.RegionTags[i]);
                         writer.WriteAttributeString("offset", info.ArcOffset);
 
                         if (info.CompressedSize == info.DecompressedSize)
@@ -108,45 +108,38 @@ namespace CrossArc.GUI.Nodes
             }
         }
 
-        public void WriteToFileTXT(string filePath)
+        public void WriteToFileCsv(string filePath)
         {
             using (StreamWriter writer = new StreamWriter(new FileStream(filePath, FileMode.Create)))
             {
-                WriteToFileTXT(writer);
+                writer.WriteLine("Full Path, Offset, Compressed Size, Decompressed Size"); // Write header
+                WriteToFileCsv(writer);
             }
         }
 
-        private void WriteToFileTXT(StreamWriter writer)
+        private void WriteToFileCsv(StreamWriter writer)
         {
             if (this is FileNode file)
             {
                 var info = file.FileInformation;
-                if(info.region)
+                if (info.region)
                 {
-                    for(int i = 0; i < 14; i++)
+                    for (int i = 0; i < 14; i++)
                     {
                         info = new FileInformation(file.ArcPath, i);
 
-                        if (info.CompressedSize == info.DecompressedSize)
-                            writer.WriteLine($"{ProgressBar.GetRegionalPath(FullPath)} | Offset: {info.ArcOffset} Size: {info.CompressedSize.ToString("X")}");
-                        else
-                            writer.WriteLine($"{ProgressBar.GetRegionalPath(FullPath)} | Offset: {info.ArcOffset} CompSize: {info.CompressedSize.ToString("X")} DecompSize: {info.DecompressedSize.ToString("X")}");
-
+                        writer.WriteLine($"{FileExtraction.GetRegionalPath(FullPath)},{info.ArcOffset},{info.CompressedSize:X},{info.DecompressedSize:X}");
                     }
                 }
                 else
                 {
-                    if (info.CompressedSize == info.DecompressedSize)
-                        writer.WriteLine($"{FullPath} | Offset: {info.ArcOffset} Size: {info.CompressedSize.ToString("X")}");
-                    else
-                        writer.WriteLine($"{FullPath} | Offset: {info.ArcOffset} CompSize: 0x{info.CompressedSize.ToString("X")} DecompSize: 0x{info.DecompressedSize.ToString("X")}");
-
+                    writer.WriteLine($"{FullPath},{info.ArcOffset},{info.CompressedSize:X},{info.DecompressedSize:X}");
                 }
             }
             if (GetType() == typeof(FolderNode))
             {
                 foreach (var s in SubNodes)
-                    s.WriteToFileTXT(writer);
+                    s.WriteToFileCsv(writer);
             }
         }
     }

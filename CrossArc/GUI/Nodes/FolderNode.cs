@@ -1,23 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Windows.Forms;
+﻿using System.Collections.Generic;
 
 namespace CrossArc.GUI.Nodes
 {
     public class FolderNode : BaseNode
     {
-        public BaseNode[] Children
+        public FolderNode(string text)
         {
-            get
-            {
-                return SubNodes.ToArray();
-            }
-        }
-
-        public FolderNode(string Text)
-        {
-            this.Text = Text;
+            Text = text;
         }
 
         public void AddChild(BaseNode node)
