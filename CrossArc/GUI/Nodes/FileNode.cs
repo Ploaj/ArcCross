@@ -6,7 +6,12 @@
         {
             get
             {
-                return FullPath.Replace("\\", "/").Replace("root/", "");
+                var path = FullPath.Replace("\\", "/");
+
+                if(path.StartsWith("root/"))
+                    path = path.Substring(path.IndexOf("root/") + "root/".Length);
+
+                return path;
             }
         }
         
