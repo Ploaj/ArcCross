@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Zstandard.Net;
 
 namespace ArcCross
@@ -60,20 +61,27 @@ namespace ArcCross
         private Dictionary<string, _sFileInformationV1> pathToFileInfoV1 = new Dictionary<string, _sFileInformationV1>();
         private Dictionary<string, _sFileInformationV2> pathToFileInfo = new Dictionary<string, _sFileInformationV2>();
         private Dictionary<uint, _sStreamNameToHash> pathCrc32ToStreamInfo = new Dictionary<uint, _sStreamNameToHash>();
-        private IDictionary<_sSubFileInfo, List<_sFileInformationV2>> SharedLookup = new Dictionary<_sSubFileInfo, List<_sFileInformationV2>>();
+
+        struct UnderlyingData
+        {
+            public uint subfileIndex;
+            public uint directoryOffsetIndex;
+        };
+        private object sharedLookupLock = new object();
+        private IDictionary<UnderlyingData, List<_sFileInformationV2>> sharedLookup = new Dictionary<UnderlyingData, List<_sFileInformationV2>>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Arc"/> class and initializes the file system from the specified path.
         /// </summary>
         /// <param name="arcFilePath"></param>
-        public Arc(string arcFilePath)
+        public Arc(string arcFilePath, int region)
         {
             InitFileSystem(arcFilePath);
 
             FilePaths = GetFileList();
             StreamFilePaths = GetStreamFileList();
 
-            InitializeSharedLookup();
+            InitializeSharedLookup(region);
             InitializePathToFileInfo();
         }
 
@@ -112,18 +120,23 @@ namespace ArcCross
             }
         }
 
-        private void InitializeSharedLookup()
+        private void InitializeSharedLookup(int region)
         {
-            foreach (var fi in fileInfoV2)
+
+            lock (sharedLookupLock)
             {
-                GetSubInfo(fi, out var subFileInfo, out var _);
+                sharedLookup = new Dictionary<UnderlyingData, List<_sFileInformationV2>>();
+                foreach (var fi in fileInfoV2)
+                {
+                    GetSubInfo(fi, out var subFileInfo, region);
 
-                if (!SharedLookup.ContainsKey(subFileInfo)) SharedLookup[subFileInfo] = new List<_sFileInformationV2>();
+                    if (!sharedLookup.ContainsKey(subFileInfo)) sharedLookup[subFileInfo] = new List<_sFileInformationV2>();
 
-                var fiv = SharedLookup[subFileInfo];
+                    var fiv = sharedLookup[subFileInfo];
 
-                if (!fiv.Select(f => f.PathIndex).Contains(fi.PathIndex)) // prevent duplicate files with same path
-                    fiv.Add(fi);
+                    if (!fiv.Select(f => f.PathIndex).Contains(fi.PathIndex)) // prevent duplicate files with same path
+                        fiv.Add(fi);
+                }
             }
         }
 
@@ -246,6 +259,11 @@ namespace ArcCross
                 subFiles = reader.ReadType<_sSubFileInfo>(fsHeader.SubFileCount + fsHeader.SubFileCount2 + extraSubCount);
                 Console.WriteLine("End:" + reader.BaseStream.Position.ToString("X"));
             }
+        }
+
+        public void UpdateRegion(int region)
+        {
+            Task.Run(() => InitializeSharedLookup(region));
         }
 
         public void WriteFileSystem(string filename)
@@ -406,17 +424,19 @@ namespace ArcCross
         public List<string> GetSharedFiles(string path, int region = 0)
         {
             List<string> shared = new List<string>();
-            if (GetArcFileInfoV2(path, out var fileInfo))
-            {
-                GetSubInfo(fileInfo, out var subFile, out _, region);
 
-                var fiv = SharedLookup[subFile];
+            lock(sharedLookupLock)
+                if (GetArcFileInfoV2(path, out var fileInfo))
+                {
+                    GetSubInfo(fileInfo, out var data, region);
 
-                foreach (var fi in fiv)
-                    shared.Add(GetFilePathFromInfo(fi));
+                    var fiv = sharedLookup[data];
 
-                shared.Sort();
-            }
+                    foreach (var fi in fiv)
+                        shared.Add(GetFilePathFromInfo(fi));
+
+                    shared.Sort();
+                }
 
             return shared;
         }
@@ -592,14 +612,7 @@ namespace ArcCross
 
         private string GetFilePathFromInfo(_sFileInformationV2 file)
         {
-            var path = fileInfoPath[file.PathIndex]; 
-
-            string pathString = HashDict.GetString(path.Parent, (int)(path.Unk5 & 0xFF));
-            string filename = HashDict.GetString(path.FileName, (int)(path.Unk6 & 0xFF));
-            if (filename.StartsWith("0x"))
-                filename += HashDict.GetString(path.Extension);
-
-            return pathString + filename;
+            return fileInfoPath[file.PathIndex].PathString;
         }
 
         /// <summary>
@@ -660,7 +673,7 @@ namespace ArcCross
                 GetFileInformation(pathToFileInfo[filepath], out offset, out compSize, out decompSize, regionIndex);
         }
 
-        public void GetSubInfo(_sFileInformationV2 fileinfo, out _sSubFileInfo subFile, out _sDirectoryOffset directoryOffset, int regionIndex = 0)
+        private void GetSubInfo(_sFileInformationV2 fileinfo, out UnderlyingData data, int regionIndex = 0)
         {
             var fileIndex = fileInfoIndex[fileinfo.IndexIndex];
 
@@ -673,15 +686,15 @@ namespace ArcCross
             var path = fileInfoPath[fileinfo.PathIndex];
             var subIndex = fileInfoSubIndex[fileinfo.SubIndexIndex];
 
-            subFile = subFiles[subIndex.SubFileIndex];
-            directoryOffset = directoryOffsets[subIndex.DirectoryOffsetIndex];
+            data.subfileIndex = subIndex.SubFileIndex;
+            data.directoryOffsetIndex = subIndex.DirectoryOffsetIndex;
 
             //regional
             if ((fileinfo.Flags & 0x00008000) == 0x8000)
             {
                 subIndex = fileInfoSubIndex[fileinfo.SubIndexIndex + 1 + regionIndex];
-                subFile = subFiles[subIndex.SubFileIndex];
-                directoryOffset = directoryOffsets[subIndex.DirectoryOffsetIndex];
+                data.subfileIndex = subIndex.SubFileIndex;
+                data.directoryOffsetIndex = subIndex.DirectoryOffsetIndex;
             }
 
         }
@@ -696,7 +709,9 @@ namespace ArcCross
         /// <param name="regionIndex"></param>
         private void GetFileInformation(_sFileInformationV2 fileinfo, out long offset, out uint compSize, out uint decompSize, int regionIndex = 0)
         {
-            GetSubInfo(fileinfo, out var subFile, out var directoryOffset, regionIndex);
+            GetSubInfo(fileinfo, out var data, regionIndex);
+            var subFile = subFiles[data.subfileIndex];
+            var directoryOffset = directoryOffsets[data.directoryOffsetIndex];
 
             offset = (header.FileDataOffset + directoryOffset.Offset + (subFile.Offset << 2));
             compSize = subFile.CompSize;
