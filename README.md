@@ -1,12 +1,13 @@
 # ArcCross
-
 A library for parsing file information from Smash Ultimate's ARC file.
 
 # CrossArc
-
-A file extractor for Smash Ultimate's ARC file.
-
 [![Build status](https://ci.appveyor.com/api/projects/status/drd2v75fe4mqm4po?svg=true)](https://ci.appveyor.com/project/Ploaj/arccross) 
+
+A file extractor for Smash Ultimate's ARC file. 
+
+This project is no longer actively maintained and has been replaced by [ArcExplorer](https://github.com/ScanMountGoat/ArcExplorer), which has an updated interface, improved performance and stability, and support for Windows and Linux. It's recommended to only use CrossArc for data.arc files prior to game version 5.0 since these older versions of the ARC will not open in ArcExplorer.  
+
 
 ### Opening an ARC
 Click `File > Open ARC` and then select the appropriate `.arc` file. 
